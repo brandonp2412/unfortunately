@@ -1,0 +1,26 @@
+# Python bytecode and test/tool caches
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# Local virtual environments and environment-specific secrets
+.venv/
+venv/
+ENV/
+.env
+.env.*
+!.env.example
+
+# Editor and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Reproducible ERA source cache (large PDFs, extracted text, and search HTML)
+years/*/data/pdfs/
+years/*/data/text/
+years/*/data/search_page_*.html
+data/pdfs/
+data/text/
+data/search_page_*.html
