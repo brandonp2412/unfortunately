@@ -29,6 +29,16 @@ def tail_paragraphs(value: str, max_chars: int) -> str:
     return " || ".join(reversed(kept))
 
 
+def contribution_hit(row: dict[str, str]) -> bool:
+    """Route actual contribution/s 124 references, not mere absence of a finding."""
+    if row.get("candidate_contribution") == "yes":
+        return True
+    operative = (row.get("operative_findings_conclusion_orders_excerpt") or "").lower()
+    remedies = (row.get("remedies_orders_excerpt") or "").lower()
+    combined = operative + " " + remedies
+    return any(term in combined for term in ("contribut", "s 124", "s.124", "section 124"))
+
+
 def build(root: Path, year: int) -> Path:
     source = root / "output" / f"{year}_review_dossier.csv"
     with source.open(newline="") as handle:
@@ -36,11 +46,12 @@ def build(root: Path, year: int) -> Path:
 
     briefs = []
     for row in rows:
+        contribution_requires_review = contribution_hit(row)
         high_risk = any((
             row.get("candidate_document_category") == "possible_merits_determination"
             and row.get("candidate_outcome") == "mixed_unclear",
             row.get("candidate_serious_misconduct_alleged") == "yes",
-            row.get("candidate_contribution") != "no",
+            contribution_requires_review,
             int(row.get("text_chars") or 0) < 1000,
         ))
         briefs.append({
@@ -56,6 +67,7 @@ def build(root: Path, year: int) -> Path:
             "candidate_serious_misconduct_alleged": row.get("candidate_serious_misconduct_alleged", ""),
             "candidate_contribution": row.get("candidate_contribution", ""),
             "candidate_contribution_percentage": row.get("candidate_contribution_percentage", ""),
+            "contribution_or_s124_text_hit": "yes" if contribution_requires_review else "no",
             "dismissal_reason_excerpt": (row.get("dismissal_reason_excerpt") or "")[:450],
             "operative_findings_conclusion_orders_excerpt": tail_paragraphs(
                 row.get("operative_findings_conclusion_orders_excerpt") or "", 1800
