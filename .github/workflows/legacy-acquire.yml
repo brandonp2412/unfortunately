@@ -16,24 +16,50 @@ permissions:
 jobs:
   acquire:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        year: [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019]
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Install PDF extraction tools
         run: |
           sudo apt-get update
           sudo apt-get install -y poppler-utils tesseract-ocr
 
-      - name: Acquire 2010 through 2019
+      - name: Acquire year
+        run: python3 analyze_legacy_year.py --root "years/${{ matrix.year }}" --year "${{ matrix.year }}"
+
+      - name: Stage auditable review inputs
         run: |
           set -euo pipefail
-          for year in $(seq 2010 2019); do
-            echo "===== $year ====="
-            python3 analyze_legacy_year.py --root "years/$year" --year "$year"
-          done
+          mkdir -p "artifact/years/${{ matrix.year }}/output"
+          cp "years/${{ matrix.year }}/output/initial_extraction.csv" "artifact/years/${{ matrix.year }}/output/"
+          cp "years/${{ matrix.year }}/output/${{ matrix.year }}_review_dossier.csv" "artifact/years/${{ matrix.year }}/output/"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: era-${{ matrix.year }}
+          path: artifact/
+          if-no-files-found: error
+          retention-days: 1
+
+  collect:
+    needs: acquire
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: era-*
+          path: .
+          merge-multiple: true
 
       - name: Audit corpus completeness
         run: |
