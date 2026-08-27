@@ -1,7 +1,9 @@
 # Agent instructions for adding ERA years
 
 This repository is an empirical legal-outcomes project. A new year is not
-complete when PDFs have merely been downloaded or keyword-classified.
+complete when PDFs have merely been downloaded or keyword-classified. The agent
+performing the work is responsible for completing the substantive review itself;
+do not stop at a queue or defer classification to a later human reviewer.
 
 ## Required workflow
 
@@ -9,8 +11,9 @@ complete when PDFs have merely been downloaded or keyword-classified.
 2. Verify the search pagination ended normally and count unique PDF URLs.
 3. Extract text and OCR failures; inspect every row whose text is empty or
    suspiciously short.
-4. Manually inspect every possible merits determination. Read the operative
-   findings, conclusion, and orders—not just the background allegations.
+4. Inspect every possible merits determination individually. Read the operative
+   findings, conclusion, and orders—not just the background allegations or an
+   automated hint.
 5. Exclude costs-only, procedural/interlocutory, withdrawals, discontinuances,
    want-of-prosecution dismissals, compliance/removal decisions, duplicates,
    and decisions referring to another dismissal without deciding it.
@@ -20,10 +23,10 @@ complete when PDFs have merely been downloaded or keyword-classified.
    confidence, and review notes.
 7. Treat “serious misconduct” as ERA-confirmed only when the Authority finds
    both that the conduct occurred and that it amounted to serious misconduct.
-8. Review every mixed/unclear outcome and every serious-misconduct,
-   summary-dismissal, gross-misconduct, contribution, or s 124 hit twice.
+8. Re-read every mixed/unclear outcome and every serious-misconduct,
+   summary-dismissal, gross-misconduct, contribution, or s 124 hit before finalizing it.
 9. Deduplicate follow-up determinations against the underlying merits decision.
-10. Recalculate all published tables from the reviewed CSV and run the tests.
+10. Recalculate all published tables from the completed classifications and run the tests.
 11. If context categories are requested, run `python3 enrich_context.py`.
     Treat its fields as extraction candidates only: verify the source excerpt,
     keep `not_stated` where the decision is silent, and do not infer ethnicity,
@@ -35,7 +38,8 @@ complete when PDFs have merely been downloaded or keyword-classified.
 - Never classify an allegation as proven serious misconduct.
 - Never force an unclear case into employee/employer win.
 - Never copy year-specific classification overrides into another year.
-- Never report a percentage while mixed/uncertain cases remain unreviewed.
+- Never stop merely because a case needs judgment: inspect the decision and make
+  the best-supported classification, preserving `mixed_unclear` where warranted.
 
 The final handoff must include the raw-results CSV, the substantive-claims CSV,
 the uncertain-case list, the report, and the exact script command used.
