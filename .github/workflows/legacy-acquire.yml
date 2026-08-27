@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Install PDF extraction tools
         run: |
@@ -83,4 +83,5 @@ jobs:
             git add "years/$year/output/initial_extraction.csv" "years/$year/output/${year}_review_dossier.csv"
           done
           git commit -m "Acquire 2010-2019 ERA review corpus"
-          git push
+          git pull --rebase origin master
+          git push origin HEAD:master
