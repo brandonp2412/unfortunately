@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Compress review dossiers into a readable first-pass ledger.
+"""Compress review dossiers into readable first-pass and micro review ledgers.
 
-This does not classify cases. It only keeps enough operative material to let a
-human reviewer read every row efficiently, while routing ambiguous/high-risk
-rows back to the larger dossier or source PDF for a second pass.
+These files do not classify cases. They keep operative material for human review
+and route ambiguous/high-risk rows back to the larger dossier or source PDF.
 """
 from __future__ import annotations
 
@@ -29,6 +28,23 @@ def tail_paragraphs(value: str, max_chars: int) -> str:
     return " || ".join(reversed(kept))
 
 
+def compact_part(value: str, max_chars: int) -> str:
+    value = value.strip()
+    if len(value) <= max_chars:
+        return value
+    head = min(90, max_chars // 3)
+    return value[:head].rstrip() + " … " + value[-(max_chars - head - 3):].lstrip()
+
+
+def micro_operative(value: str, max_chars: int = 520) -> str:
+    parts = [part.strip() for part in value.split(" || ") if part.strip()]
+    if not parts:
+        return compact_part(value, max_chars)
+    selected = parts[-2:]
+    each = max(180, (max_chars - 4) // len(selected))
+    return " || ".join(compact_part(part, each) for part in selected)[-max_chars:]
+
+
 def contribution_hit(row: dict[str, str]) -> bool:
     """Route actual contribution/s 124 references, not mere absence of a finding."""
     if row.get("candidate_contribution") == "yes":
@@ -45,6 +61,7 @@ def build(root: Path, year: int) -> Path:
         rows = list(csv.DictReader(handle))
 
     briefs = []
+    micros = []
     for row in rows:
         contribution_requires_review = contribution_hit(row)
         high_risk = any((
@@ -54,7 +71,7 @@ def build(root: Path, year: int) -> Path:
             contribution_requires_review,
             int(row.get("text_chars") or 0) < 1000,
         ))
-        briefs.append({
+        brief = {
             "year": str(year),
             "search_result_number": row.get("search_result_number", ""),
             "era_citation": row.get("era_citation", ""),
@@ -75,15 +92,40 @@ def build(root: Path, year: int) -> Path:
             "remedies_orders_excerpt": tail_paragraphs(row.get("remedies_orders_excerpt") or "", 900),
             "full_dossier_second_pass_candidate": "yes" if high_risk else "no",
             "manual_review_status": "pending",
+        }
+        briefs.append(brief)
+        micros.append({
+            "year": str(year),
+            "search_result_number": row.get("search_result_number", ""),
+            "era_citation": row.get("era_citation", ""),
+            "case_name": compact_part(row.get("case_name", "") or "", 120),
+            "candidate_document_category": row.get("candidate_document_category", ""),
+            "candidate_outcome": row.get("candidate_outcome", ""),
+            "serious_alleged_candidate": row.get("candidate_serious_misconduct_alleged", ""),
+            "contribution_text_hit": "yes" if contribution_requires_review else "no",
+            "reason": compact_part(row.get("dismissal_reason_excerpt", "") or "", 180),
+            "operative": micro_operative(row.get("operative_findings_conclusion_orders_excerpt", "") or "", 520),
+            "remedies": compact_part(tail_paragraphs(row.get("remedies_orders_excerpt", "") or "", 350), 220),
+            "second_pass_candidate": "yes" if high_risk else "no",
         })
 
-    target = root / "output" / f"{year}_review_brief.csv"
+    output = root / "output"
+    target = output / f"{year}_review_brief.csv"
     fields = list(briefs[0]) if briefs else ["year", "search_result_number", "era_citation"]
     with target.open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()
         writer.writerows(briefs)
+
+    micro_target = output / f"{year}_review_micro.csv"
+    micro_fields = list(micros[0]) if micros else ["year", "search_result_number", "era_citation"]
+    with micro_target.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=micro_fields)
+        writer.writeheader()
+        writer.writerows(micros)
+
     print(f"wrote {len(briefs)} review briefs to {target}")
+    print(f"wrote {len(micros)} micro review rows to {micro_target}")
     return target
 
 
