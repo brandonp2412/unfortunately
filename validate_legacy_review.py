@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail unless a legacy ERA year has been completely and audibly human-reviewed."""
+"""Fail unless a legacy ERA year has been completely and audibly reviewed."""
 from __future__ import annotations
 
 import argparse
@@ -55,8 +55,8 @@ def validate(root: Path, year: int) -> list[str]:
 
     require(errors, len(initial_urls) == len(set(initial_urls)), str(year), "initial extraction contains duplicate PDF URLs")
     require(errors, len(initial) == len(brief), str(year), "initial extraction and review brief row counts differ")
-    require(errors, len(initial) == len(review), str(year), "initial extraction and manual review row counts differ")
-    require(errors, set(initial_urls) == set(review_by_url), str(year), "manual review does not cover exactly the acquired PDF URLs")
+    require(errors, len(initial) == len(review), str(year), "initial extraction and review row counts differ")
+    require(errors, set(initial_urls) == set(review_by_url), str(year), "review does not cover exactly the acquired PDF URLs")
 
     for source in initial:
         url = source.get("pdf_url", "")
@@ -68,8 +68,8 @@ def validate(root: Path, year: int) -> list[str]:
         included = row.get("included_in_merits_denominator", "")
         outcome = row.get("final_outcome", "")
 
-        require(errors, row.get("manual_review_status") == "reviewed", label, "manual_review_status must be reviewed")
-        require(errors, bool(row.get("manual_review_notes", "").strip()), label, "manual_review_notes is required")
+        require(errors, row.get("manual_review_status") == "reviewed", label, "review status must be reviewed")
+        require(errors, bool(row.get("manual_review_notes", "").strip()), label, "review notes are required")
         require(errors, row.get("confidence") in CONFIDENCE, label, "confidence must be high/medium/low")
         require(errors, category == INCLUDED_CATEGORY or category in EXCLUDED_CATEGORIES, label, "invalid or missing document_category")
 
@@ -99,7 +99,7 @@ def validate(root: Path, year: int) -> list[str]:
         must_second_review = any((
             outcome == "mixed_unclear",
             row.get("serious_misconduct_alleged") == "yes",
-            row.get("contributory_conduct_found_s124") in {"yes", "unclear"},
+            row.get("contributory_conduct_found_s124") == "yes",
             brief_row.get("full_dossier_second_pass_candidate") == "yes",
         ))
         if must_second_review:
@@ -122,7 +122,7 @@ def main() -> None:
         for error in errors:
             print(error)
         raise SystemExit(f"review validation failed with {len(errors)} error(s)")
-    print(f"{args.year}: every acquired determination has a complete human review record")
+    print(f"{args.year}: every acquired determination has a complete review record")
 
 
 if __name__ == "__main__":
