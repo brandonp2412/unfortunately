@@ -29,7 +29,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           for year in $(seq 2010 2019); do
-            git add "years/$year/output/${year}_review_brief.csv"
+            git add "years/$year/output/${year}_review_brief.csv" "years/$year/output/${year}_review_micro.csv"
           done
           git commit -m "Build 2010-2019 ERA review briefs"
-          git push
+          git pull --rebase origin master
+          git push origin HEAD:master
