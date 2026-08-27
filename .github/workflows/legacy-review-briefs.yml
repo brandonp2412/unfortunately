@@ -1,0 +1,35 @@
+name: Build legacy ERA review briefs
+
+on:
+  push:
+    paths:
+      - 'years/*/output/*_review_dossier.csv'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: legacy-review-briefs
+  cancel-in-progress: true
+
+jobs:
+  briefs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build compact review briefs
+        run: |
+          set -euo pipefail
+          for year in $(seq 2010 2019); do
+            python3 make_legacy_review_brief.py --root "years/$year" --year "$year"
+          done
+      - name: Commit briefs
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for year in $(seq 2010 2019); do
+            git add "years/$year/output/${year}_review_brief.csv"
+          done
+          git commit -m "Build 2010-2019 ERA review briefs"
+          git push
