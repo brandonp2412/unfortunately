@@ -3,9 +3,10 @@
 What happened when New Zealand employees challenged dismissal at the Employment
 Relations Authority in 2025?
 
-This project downloads public ERA decisions, routes them for legal review, and
-keeps the resulting evidence in auditable CSV files. The current README
-highlights the most recent completed search: **2025**.
+This project downloads public ERA decisions, reads each determination's operative
+findings/conclusion/orders for classification, and keeps the resulting evidence
+in auditable CSV files. The current README highlights the most recent completed
+search: **2025**.
 
 ![Outcome classification by year](output/charts/outcomes_by_year.png)
 
@@ -36,9 +37,9 @@ Read the full 2025 report: [2025 categorized results](years/2025/output/2025_fin
 ## Important interpretation note
 
 The 2025 file deliberately preserves mixed and unclear outcomes rather than
-forcing a binary result. Its serious-misconduct fields are initial text-routing
-flags, not confirmed findings: each needs operative-findings legal verification
-before it can be reported as ERA-confirmed serious misconduct.
+forcing a binary result. Serious-misconduct labels are only final when supported
+by the Authority's operative findings; employer allegations alone are not
+sufficient.
 
 ## Supporting charts
 
@@ -53,12 +54,9 @@ outcomes.*
 
 ![Overall outcome classification](output/charts/outcome_overall_pie.png)
 
-### Serious-misconduct review status
+### Serious-misconduct status
 
 ![Serious-misconduct status by year](output/charts/serious_status_by_year.png)
-
-*These are review-status categories, not a count of confirmed serious
-misconduct findings.*
 
 ### Case context
 
@@ -86,5 +84,7 @@ python3 make_charts.py
 pytest -q tests/test_analyze_era.py
 ```
 
-The full method, field definitions, limitations, and audit trail are in
-[TECHNICAL.md](TECHNICAL.md). Source decisions: [New Zealand ERA database](https://determinations.era.govt.nz/).
+Agents extending the dataset must complete the per-determination classification
+themselves rather than stopping at generated review queues. The full method,
+field definitions, limitations, and audit trail are in [TECHNICAL.md](TECHNICAL.md).
+Source decisions: [New Zealand ERA database](https://determinations.era.govt.nz/).
