@@ -6,6 +6,10 @@ on:
       - .github/workflows/legacy-acquire.yml
   workflow_dispatch:
 
+concurrency:
+  group: legacy-era-acquisition
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
