@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - .github/workflows/legacy-acquire.yml
+  workflow_dispatch:
 
 permissions:
   contents: write
