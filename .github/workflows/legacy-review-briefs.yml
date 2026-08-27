@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Run tests
+        run: python3 -m pytest -q
       - name: Build compact review briefs
         run: |
           set -euo pipefail
