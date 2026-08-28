@@ -1,17 +1,19 @@
-# NZ ERA dismissal decisions — 2025
+# NZ ERA dismissal decisions — 2010–2025
 
 What happened when New Zealand employees challenged dismissal at the Employment
-Relations Authority in 2025?
+Relations Authority?
 
 This project downloads public ERA decisions, reads each determination's operative
 findings/conclusion/orders for classification, and keeps the resulting evidence
-in auditable CSV files. The current README highlights the most recent completed
-search: **2025**.
+in auditable CSV files. The main outcome charts now span **2010–2025**: the
+completed strict 2010–2019 classification is combined with the existing
+2020–2025 classification data.
 
 ![Outcome classification by year](output/charts/outcomes_by_year.png)
 
-*2025 is the largest search cohort shown. Its substantial mixed/unclear segment
-is retained instead of being forced into a binary employee or employer result.*
+*The main outcome charts span 2010–2025. The 2010–2019 segment comes from the
+completed strict audit; 2020–2025 retains the current mixed/unclear category
+rather than forcing every result into a binary employee/employer outcome.*
 
 ## Completed 2010–2019 strict classification
 
@@ -59,22 +61,28 @@ sufficient.
 
 ## Supporting charts
 
-### Win-rate comparison
+### Win-rate comparison — 2010–2025
 
 ![Employee win rate by year](output/charts/employee_win_rate_by_year.png)
 
 *Green shows all classified outcomes; blue shows only clear employee/employer
-outcomes.*
+outcomes. The lines coincide for 2010–2019 because the completed strict legacy
+audit resolves each included merits determination to a clear employee or
+employer result.*
 
-### Overall outcome mix
+### Overall outcome mix — 2010–2025
 
 ![Overall outcome classification](output/charts/outcome_overall_pie.png)
 
-### Serious-misconduct status
+### Serious-misconduct status — 2020–2025
 
 ![Serious-misconduct status by year](output/charts/serious_status_by_year.png)
 
-### Case context
+*Serious-misconduct and contextual charts remain scoped to 2020–2025 because
+the legacy strict output records final dismissal category/outcome and operative
+support, but not those richer enrichment fields.*
+
+### Case context — 2020–2025
 
 ![Industry signal](output/charts/industry_overall_pie.png)
 
