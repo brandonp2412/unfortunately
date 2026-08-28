@@ -1,0 +1,4 @@
+total_substantive=3046
+mechanically_clear_or_prior_audited=1251
+direct_audit_remaining=1795
+progress_percent=41.07
