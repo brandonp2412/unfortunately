@@ -48,7 +48,8 @@ jobs:
           assert all(r['observable_net_money'] != '' for r in mixed)
           print('rows', len(rows), 'mixed-resolved', len(mixed))
           print('mixed binary counts', Counter(r['binary_outcome'] for r in mixed))
-          print('unallocated money rows', sum(int(r['unallocated_money_units'] or 0) > 0 for r in mixed))
+          print('materially unallocated rows', sum(int(r['unallocated_money_units'] or 0) > 0 for r in mixed))
+          print('both-sides money rows', sum(r.get('both_sides_money') == 'yes' for r in mixed))
           PY
 
       - name: Commit binary classification
@@ -56,7 +57,10 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add output/combined_2020_2025_binary_classification.csv output/mixed_financial_review_queue.csv
+          git add \
+            output/combined_2020_2025_binary_classification.csv \
+            output/mixed_financial_review_queue.csv \
+            output/mixed_financial_high_risk.csv
           if git diff --cached --quiet; then
             echo "Binary classification already current"
             exit 0
