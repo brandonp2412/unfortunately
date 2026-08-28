@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - make_charts.py
+      - validate_legacy_review.py
       - .github/workflows/charts.yml
   workflow_dispatch:
 
