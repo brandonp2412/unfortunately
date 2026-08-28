@@ -1,0 +1,71 @@
+name: Publish completed legacy classification
+
+on:
+  push:
+    paths:
+      - finalize_legacy_strict.py
+      - .github/workflows/legacy-finalize.yml
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: legacy-finalize
+  cancel-in-progress: true
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download completed 2010-2019 acquisition artifacts
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 33118434569
+          pattern: era-*
+          path: .
+          merge-multiple: true
+
+      - name: Materialize strict classification
+        run: python3 finalize_legacy_strict.py --root .
+
+      - name: Install test dependency
+        run: python3 -m pip install --disable-pip-version-check pytest
+
+      - name: Run tests
+        run: python3 -m pytest -q
+
+      - name: Audit final outputs
+        run: |
+          python3 - <<'PY'
+          import csv
+          from pathlib import Path
+          p = Path('output/combined_2010_2019_strict_classification.csv')
+          rows = list(csv.DictReader(p.open(newline='')))
+          assert len(rows) == 4038
+          assert len({r['pdf_url'] for r in rows}) == 4038
+          assert all(r['strict_audit_status'] == 'reviewed' for r in rows)
+          assert all(r['supporting_quote_or_paragraph'].strip() for r in rows)
+          assert all((r['document_category'] == 'included_merits') == (r['final_outcome'] in {'employee_win', 'employer_win'}) for r in rows)
+          print('final audit pass: 4038/4038 unique reviewed determinations')
+          PY
+
+      - name: Commit final classification
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add output/combined_2010_2019_strict_classification.csv output/LEGACY_2010_2019_STRICT_REPORT.md
+          for year in $(seq 2010 2019); do
+            git add "years/$year/output/${year}_strict_classification.csv"
+          done
+          git commit -m "Publish completed 2010-2019 strict classification"
+          git pull --rebase origin master
+          git push origin HEAD:master
