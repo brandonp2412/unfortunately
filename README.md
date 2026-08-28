@@ -13,6 +13,22 @@ search: **2025**.
 *2025 is the largest search cohort shown. Its substantial mixed/unclear segment
 is retained instead of being forced into a binary employee or employer result.*
 
+## Completed 2010–2019 strict classification
+
+The ten-year legacy extension is now complete. All **4,038 unique determinations**
+from 2010–2019 have a final category and outcome after an operative-findings pass
+plus a **345-case strict second audit** of higher-risk classifications.
+
+- **2,373** substantive dismissal-merits determinations
+- **1,449** employee wins
+- **924** employer wins
+- **1,665** excluded non-merits determinations
+- **61.1%** employee-win rate among substantive dismissal merits
+
+Read the [2010–2019 strict report](output/LEGACY_2010_2019_STRICT_REPORT.md) or
+inspect the [combined 4,038-row classification](output/combined_2010_2019_strict_classification.csv).
+Each legacy year also has its own `years/YYYY/output/YYYY_strict_classification.csv`.
+
 ## 2025 results
 
 The official 2025 search returned **234 unique PDFs**. Following the initial
@@ -66,13 +82,12 @@ outcomes.*
 
 ## Project outputs
 
+- [2010–2019 strict report](output/LEGACY_2010_2019_STRICT_REPORT.md)
+- [2010–2019 combined strict classification](output/combined_2010_2019_strict_classification.csv)
 - [2025 categorized decisions](years/2025/output/2025_final_categorized.csv)
 - [2025 review queue](years/2025/output/2025_categorized_review_queue.csv)
 - [2025 initial extraction](years/2025/output/initial_extraction.csv)
 - [Combined 2020–2025 report](output/final_report.md)
-
-The combined historical outputs and charts remain available for comparison, but
-they are not the focus of the current report.
 
 ## Reproduce or extend
 
@@ -83,6 +98,9 @@ python3 enrich_context.py
 python3 make_charts.py
 pytest -q tests/test_analyze_era.py
 ```
+
+The completed legacy classification can be re-materialized from its acquisition
+inputs with `python3 finalize_legacy_strict.py --root .`.
 
 Agents extending the dataset must complete the per-determination classification
 themselves rather than stopping at generated review queues. The full method,
