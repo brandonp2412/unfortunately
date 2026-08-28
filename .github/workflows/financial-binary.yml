@@ -60,7 +60,8 @@ jobs:
           git add \
             output/combined_2020_2025_binary_classification.csv \
             output/mixed_financial_review_queue.csv \
-            output/mixed_financial_high_risk.csv
+            output/mixed_financial_high_risk.csv \
+            output/mixed_financial_outcome_changing_review.csv
           if git diff --cached --quiet; then
             echo "Binary classification already current"
             exit 0
