@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - apply_uniform_scope_audit.py
+      - publish_uniform_scope.py
       - .github/workflows/uniform-scope-final.yml
   workflow_dispatch:
 
@@ -22,7 +23,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Apply completed scope audit
-        run: python3 apply_uniform_scope_audit.py
+        run: python3 publish_uniform_scope.py
       - name: Run tests
         run: |
           python3 -m pip install --disable-pip-version-check pytest
