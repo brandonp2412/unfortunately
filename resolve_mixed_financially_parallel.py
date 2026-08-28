@@ -7,7 +7,14 @@ import csv
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from resolve_mixed_financially import fetch_pdf, pdf_text, score_text
+from resolve_mixed_financially import (
+    direction,
+    fetch_pdf,
+    order_window,
+    pdf_text,
+    score_text,
+    units,
+)
 
 
 def blank_out(row: dict[str, str]) -> dict[str, str]:
@@ -21,6 +28,7 @@ def blank_out(row: dict[str, str]) -> dict[str, str]:
         "observable_net_money": "",
         "financial_evidence": "",
         "unallocated_money_units": "",
+        "unallocated_money_evidence": "",
         "binary_outcome": original,
     })
     return out
@@ -34,7 +42,10 @@ def score_row(root: Path, row: dict[str, str]) -> dict[str, object]:
     if not pdf.exists():
         fetch_pdf(row["pdf_url"], pdf)
     text = txt.read_text(errors="replace") if txt.exists() else pdf_text(pdf, txt)
-    return score_text(text)
+    scored = score_text(text)
+    neutral_units = [unit for unit in units(order_window(text)) if direction(unit) == "neutral"]
+    scored["unallocated_money_evidence"] = " || ".join(neutral_units[-8:])[:7000]
+    return scored
 
 
 def resolve_parallel(root: Path, workers: int) -> list[dict[str, str]]:
@@ -56,11 +67,31 @@ def resolve_parallel(root: Path, workers: int) -> list[dict[str, str]]:
             out["observable_net_money"] = f"{scored['observable_net_money']:.2f}"
             out["financial_evidence"] = str(scored["financial_evidence"])
             out["unallocated_money_units"] = str(scored["unallocated_money_units"])
+            out["unallocated_money_evidence"] = str(scored["unallocated_money_evidence"])
             out["binary_outcome"] = str(scored["financial_binary_outcome"])
             done += 1
             if done % 20 == 0 or done == len(mixed_indices):
                 print(f"Scored {done}/{len(mixed_indices)} mixed rows", flush=True)
     return result
+
+
+def write_review_queue(root: Path, rows: list[dict[str, str]]) -> int:
+    flagged = [
+        row for row in rows
+        if row["financial_tiebreak_applied"] == "yes" and int(row["unallocated_money_units"] or 0) > 0
+    ]
+    fields = [
+        "year", "era_citation", "case_name", "pdf_url", "original_legal_outcome",
+        "employee_money_awarded", "employee_money_adverse", "observable_net_money",
+        "binary_outcome", "unallocated_money_units", "financial_evidence",
+        "unallocated_money_evidence",
+    ]
+    target = root / "output" / "mixed_financial_review_queue.csv"
+    with target.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows({key: row.get(key, "") for key in fields} for row in flagged)
+    return len(flagged)
 
 
 def main() -> None:
@@ -78,7 +109,7 @@ def main() -> None:
     mixed = [row for row in rows if row["financial_tiebreak_applied"] == "yes"]
     employee = sum(row["binary_outcome"] == "employee_win" for row in mixed)
     employer = sum(row["binary_outcome"] == "employer_win" for row in mixed)
-    unallocated = sum(int(row["unallocated_money_units"] or 0) > 0 for row in mixed)
+    unallocated = write_review_queue(root, rows)
     print(f"Resolved {len(mixed)} mixed rows: {employee} employee wins, {employer} employer wins", flush=True)
     print(f"Mixed rows with unallocated dollar-bearing order text: {unallocated}", flush=True)
 
