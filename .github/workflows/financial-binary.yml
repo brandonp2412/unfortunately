@@ -1,0 +1,65 @@
+name: Resolve mixed outcomes financially
+
+on:
+  push:
+    paths:
+      - resolve_mixed_financially.py
+      - tests/test_resolve_mixed_financially.py
+      - .github/workflows/financial-binary.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: financial-binary
+  cancel-in-progress: true
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y poppler-utils
+          python3 -m pip install --disable-pip-version-check pytest
+
+      - name: Run tests
+        run: python3 -m pytest -q
+
+      - name: Resolve mixed outcomes from source determinations
+        run: python3 resolve_mixed_financially.py --root .
+
+      - name: Audit binary result
+        run: |
+          python3 - <<'PY'
+          import csv
+          from collections import Counter
+          rows = list(csv.DictReader(open('output/combined_2020_2025_binary_classification.csv', newline='')))
+          mixed = [r for r in rows if r['financial_tiebreak_applied'] == 'yes']
+          assert mixed, 'no mixed rows were resolved'
+          assert all(r['binary_outcome'] in {'employee_win','employer_win'} for r in rows if r['classified_outcome'] != 'excluded')
+          assert all(r['observable_net_money'] != '' for r in mixed)
+          print('rows', len(rows), 'mixed-resolved', len(mixed))
+          print('mixed binary counts', Counter(r['binary_outcome'] for r in mixed))
+          print('unallocated money rows', sum(int(r['unallocated_money_units'] or 0) > 0 for r in mixed))
+          PY
+
+      - name: Commit binary classification
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add output/combined_2020_2025_binary_classification.csv
+          if git diff --cached --quiet; then
+            echo "Binary classification already current"
+            exit 0
+          fi
+          git commit -m "Resolve mixed outcomes with financial tie-breaker"
+          git pull --rebase origin master
+          git push origin HEAD:master
