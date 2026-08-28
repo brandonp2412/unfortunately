@@ -88,7 +88,7 @@ def party_direction(unit: str, case_name: str) -> str:
 
     lower = unit.lower()
     if contains_party(unit, employee) and AWARD_WORDS.search(unit) and not CLAIM_WORDS.search(unit):
-        if not re.search(r"\b(?:pay|costs?).{0,70}" + r"(?:respondent|employer)\b", lower):
+        if not re.search(r"\b(?:pay|costs?).{0,70}(?:respondent|employer)\b", lower):
             return "employee_positive"
     if contains_party(unit, employer) and re.search(r"\bcosts?\b", lower) and re.search(r"\bawarded\b|\bpayable\b", lower):
         return "employee_negative"
@@ -136,7 +136,6 @@ def dedupe(entries: list[tuple[float, str]]) -> list[tuple[float, str]]:
     seen: set[tuple[float, str]] = set()
     result: list[tuple[float, str]] = []
     for amount, unit in entries:
-        # Paragraph numbers are a strong key when present; otherwise normalize text.
         para = re.search(r"\[(\d+)\]", unit)
         key_text = f"p{para.group(1)}" if para else re.sub(r"\s+", " ", unit.lower())[:320]
         key = (amount, key_text)
@@ -172,9 +171,6 @@ def score_case(text: str, case_name: str) -> dict[str, object]:
     positive_total = sum(amount for amount, _ in positives)
     negative_total = sum(amount for amount, _ in negatives)
 
-    # The binary decision does not depend on duplicated/calculation amounts when
-    # money flows only one way.  Exact net arithmetic matters only when both
-    # sides have observable monetary orders.
     if positives and not negatives:
         outcome = "employee_win"
     elif negatives and not positives:
@@ -253,7 +249,7 @@ def resolve_parallel(root: Path, workers: int) -> list[dict[str, str]]:
     return result
 
 
-def write_review_queues(root: Path, rows: list[dict[str, str]]) -> tuple[int, int]:
+def write_review_queues(root: Path, rows: list[dict[str, str]]) -> tuple[int, int, int]:
     flagged = [
         row for row in rows
         if row["financial_tiebreak_applied"] == "yes" and int(row["unallocated_money_units"] or 0) > 0
@@ -262,6 +258,10 @@ def write_review_queues(root: Path, rows: list[dict[str, str]]) -> tuple[int, in
         row for row in rows
         if row["financial_tiebreak_applied"] == "yes"
         and (int(row["unallocated_money_units"] or 0) > 0 or row.get("both_sides_money") == "yes")
+    ]
+    outcome_changing = [
+        row for row in high_risk
+        if row["binary_outcome"] == "employer_win" or row.get("both_sides_money") == "yes"
     ]
     fields = [
         "year", "era_citation", "case_name", "pdf_url", "original_legal_outcome",
@@ -272,12 +272,13 @@ def write_review_queues(root: Path, rows: list[dict[str, str]]) -> tuple[int, in
     for name, selected in (
         ("mixed_financial_review_queue.csv", flagged),
         ("mixed_financial_high_risk.csv", high_risk),
+        ("mixed_financial_outcome_changing_review.csv", outcome_changing),
     ):
         with (root / "output" / name).open("w", newline="") as handle:
             writer = csv.DictWriter(handle, fieldnames=fields)
             writer.writeheader()
             writer.writerows({key: row.get(key, "") for key in fields} for row in selected)
-    return len(flagged), len(high_risk)
+    return len(flagged), len(high_risk), len(outcome_changing)
 
 
 def main() -> None:
@@ -295,10 +296,11 @@ def main() -> None:
     mixed = [row for row in rows if row["financial_tiebreak_applied"] == "yes"]
     employee = sum(row["binary_outcome"] == "employee_win" for row in mixed)
     employer = sum(row["binary_outcome"] == "employer_win" for row in mixed)
-    unallocated, high_risk = write_review_queues(root, rows)
+    unallocated, high_risk, outcome_changing = write_review_queues(root, rows)
     print(f"Resolved {len(mixed)} mixed rows: {employee} employee wins, {employer} employer wins", flush=True)
     print(f"Materially unallocated money rows: {unallocated}", flush=True)
     print(f"High-risk monetary rows (unallocated or both-sides): {high_risk}", flush=True)
+    print(f"Outcome-changing review rows: {outcome_changing}", flush=True)
 
 
 if __name__ == "__main__":
