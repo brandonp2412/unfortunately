@@ -1,0 +1,54 @@
+name: Publish audited uniform dismissal scope
+
+on:
+  push:
+    paths:
+      - apply_uniform_scope_audit.py
+      - .github/workflows/uniform-scope-final.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: uniform-scope-final
+  cancel-in-progress: true
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply completed scope audit
+        run: python3 apply_uniform_scope_audit.py
+      - name: Run tests
+        run: |
+          python3 -m pip install --disable-pip-version-check pytest
+          python3 -m pytest -q
+      - name: Audit final denominator
+        run: |
+          python3 - <<'PY'
+          import csv
+          p='output/uniform_scope_2010_2025_final.csv'
+          rows=list(csv.DictReader(open(p,newline='')))
+          assert len(rows)==4898
+          assert len({r['pdf_url'] for r in rows})==4898
+          included=[r for r in rows if r['final_scope_included']=='yes']
+          excluded=[r for r in rows if r['final_scope_included']=='no']
+          assert len(included)==2748 and len(excluded)==2150
+          assert all(r['final_scope_audit_status'] for r in rows)
+          assert all(r['final_legal_dismissal_result'] not in {'','unclear','excluded'} for r in included)
+          print('uniform scope audit pass: 4898/4898 resolved; 2748 merits; 2150 excluded')
+          PY
+      - name: Commit audited scope outputs
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add output/uniform_scope_2010_2025_final.csv output/uniform_scope_audit_resolutions.csv output/uniform_scope_summary_final.csv
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Publish audited 2010-2025 dismissal denominator"
+          git pull --rebase origin master
+          git push origin HEAD:master
