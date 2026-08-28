@@ -50,6 +50,7 @@ DIRECT = {
     "2019nzera527": ("yes", "employee_win", "unjustified dismissal and remedies"),
     "2019nzera329": ("yes", "employee_win", "unjustified dismissal and remedies"),
     "2020nzera395": ("yes", "employee_win", "unjustified dismissal and remedies"),
+    "2020nzera504": ("yes", "employee_win", "redundancy situation established; compensation ordered"),
     "2020nzera225": ("yes", "employer_win", "dismissal claim fails"),
     "2020nzera202": ("yes", "employer_win", "dismissal substantively justified"),
     "2020nzera142": ("yes", "employer_win", "dismissal justified under s103A"),

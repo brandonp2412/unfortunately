@@ -4,7 +4,6 @@ on:
   push:
     paths:
       - make_charts.py
-      - make_binary_outcome_charts.py
       - output/combined_2020_2025_binary_classification.csv
       - validate_legacy_review.py
       - .github/workflows/charts.yml
@@ -31,11 +30,8 @@ jobs:
       - name: Run tests
         run: python3 -m pytest -q
 
-      - name: Regenerate enrichment and baseline charts
+      - name: Regenerate charts
         run: python3 make_charts.py
-
-      - name: Overwrite headline charts with audited binary outcomes
-        run: python3 make_binary_outcome_charts.py
 
       - name: Commit regenerated PNGs
         run: |
