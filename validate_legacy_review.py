@@ -19,10 +19,10 @@ EXCLUDED_CATEGORIES = {
     "excluded_no_dismissal_merits",
     "excluded_other_nonmerits",
 }
-OUTCOMES = {"employee_win", "employer_win", "mixed_unclear"}
+OUTCOMES = {"employee_win", "employer_win"}
 YES_NO = {"yes", "no"}
 YES_NO_UNCLEAR = {"yes", "no", "unclear"}
-JUSTIFICATION = {"yes", "no", "mixed", "unclear", "not_applicable"}
+JUSTIFICATION = {"yes", "no", "partly", "unclear", "not_applicable"}
 CONFIDENCE = {"high", "medium", "low"}
 SERIOUS_FINDING = {"yes", "no", "not_alleged", "unclear"}
 CONDUCT_FINDING = {"yes", "no", "not_applicable", "unclear"}
@@ -56,7 +56,7 @@ def validate(root: Path, year: int) -> list[str]:
     require(errors, len(initial_urls) == len(set(initial_urls)), str(year), "initial extraction contains duplicate PDF URLs")
     require(errors, len(initial) == len(brief), str(year), "initial extraction and review brief row counts differ")
     require(errors, len(initial) == len(review), str(year), "initial extraction and review row counts differ")
-    require(errors, set(initial_urls) == set(review_by_url), str(year), "review does not cover exactly the acquired PDF URLs")
+    require(errors, set(initial_urls) == set(review_by_url), str(year), "review must cover exactly the acquired PDF URLs")
 
     for source in initial:
         url = source.get("pdf_url", "")
@@ -97,7 +97,7 @@ def validate(root: Path, year: int) -> list[str]:
 
         brief_row = brief_by_url.get(url, {})
         must_second_review = any((
-            outcome == "mixed_unclear",
+            outcome not in OUTCOMES and category == INCLUDED_CATEGORY,
             row.get("serious_misconduct_alleged") == "yes",
             row.get("contributory_conduct_found_s124") == "yes",
             brief_row.get("full_dossier_second_pass_candidate") == "yes",

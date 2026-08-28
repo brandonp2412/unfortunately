@@ -381,8 +381,8 @@ def score_row(root: Path, row: dict[str, str]) -> dict[str, str]:
             reasons.append("legal_employee_win_financial_loss")
         if out["legal_outcome"] == "employer_win" and out["financial_binary_outcome"] == "employee_win":
             reasons.append("legal_employer_win_financial_win")
-        if out["legal_outcome"] == "mixed_unclear" and out["positive_money_signal"] == "no" and out["negative_money_signal"] == "no":
-            reasons.append("mixed_zero_recovery")
+        if out["legal_outcome"] not in {"employee_win", "employer_win"} and out["positive_money_signal"] == "no" and out["negative_money_signal"] == "no":
+            reasons.append("review_zero_recovery")
     out["parser_audit_reason"] = ";".join(dict.fromkeys(reasons))
     return out
 

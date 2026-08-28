@@ -47,7 +47,7 @@ def main() -> None:
     n_sub = write_union(out / "combined_2020_2025_substantive_or_review.csv", [reviewed])
     (out / "combined_2024_2025_README.md").write_text(
         f"# Combined ERA corpus\n\nRows: {n} across calendar years 2020–2025.\n\n"
-        f"Year-specific review status is preserved in each row; mixed/unclear and initial-route classifications must not be treated as binary legal outcomes without operative-findings review.\n"
+        "Final binary outcomes come from operative-findings review; routing status remains available in the audit rows.\n"
     )
     print(f"combined_all={n} combined_substantive_or_review={n_sub}")
 

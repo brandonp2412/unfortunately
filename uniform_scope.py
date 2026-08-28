@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 """Apply one dismissal-merits denominator rule to every ERA search result.
 
-A determination is in scope only when it itself finally resolves the dismissal or
-constructive-dismissal claim.  A merits finding that no dismissal occurred (or
-that constructive dismissal failed) is an in-scope employer win.  Interim,
-time-limit/leave, removal, costs, compliance, withdrawal, and other preliminary
-rulings are out of scope.
+The merits denominator contains determinations that finally resolve dismissal or
+constructive-dismissal claims. Findings that the dismissal claim failed count as
+employer wins. Procedural, time-limit, removal, costs, compliance, withdrawal,
+and other preliminary rulings remain in the audit corpus as routed records.
 
-The parser routes obvious cases and emits an audit reason for every case where
-source judgment is still required.  It never treats an old route as conclusive
-when the operative findings conflict with it.
+The parser routes obvious cases and emits an audit reason for cases requiring
+source judgment, with operative findings taking priority over earlier routing.
 """
 from __future__ import annotations
 
@@ -201,7 +199,7 @@ def classify_scope(text: str, prior_category: str, prior_outcome: str) -> dict[s
                 "scope_support": "",
                 "scope_audit_reason": "prior_included_reclassified_procedural",
             }
-        # A prior merits row without a detectable final result needs direct judgment.
+        # A prior merits row with an unresolved final result receives direct judgment.
         return {
             "scope_included": "yes",
             "scope_reason": "prior_merits_requires_source_confirmation",
@@ -210,7 +208,7 @@ def classify_scope(text: str, prior_category: str, prior_outcome: str) -> dict[s
             "scope_audit_reason": "included_without_clear_final_result",
         }
 
-    # Unknown routes are never silently included.
+    # Unknown routes stay in the audit corpus with an explicit route.
     return {
         "scope_included": "no",
         "scope_reason": "unclassified_nonmerits_route",

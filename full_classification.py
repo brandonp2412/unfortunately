@@ -41,16 +41,16 @@ def main() -> None:
             row["year"] = str(year)
             if year == 2024:
                 row["document_category"] = "included_merits" if row.get("included_in_baseline") == "yes" else "excluded_or_nonmerits"
-                row["classified_outcome"] = row.get("outcome", "mixed_unclear")
+                outcome = row.get("outcome", "")
                 row["classification_confidence"] = row.get("confidence", "reviewed")
                 row["classification_status"] = "legal_reviewed_2024"
             else:
                 row["document_category"] = row.get("initial_category", "possible_merits_determination")
-                row["classified_outcome"] = row.get("final_outcome", "mixed_unclear")
+                outcome = row.get("final_outcome", "")
                 row["classification_confidence"] = row.get("final_confidence", "review_route")
                 row["classification_status"] = "year_route_requires_operative_findings_review"
-            # Allegation is a binary coding; uncertainty belongs only to the
-            # separate ERA-confirmation field and to the outcome field.
+            row["classified_outcome"] = outcome if outcome in {"employee_win", "employer_win", "excluded"} else "review_required"
+            # Allegation and Authority-confirmation remain separate codings.
             row["serious_misconduct_alleged_binary"] = "yes" if row.get("serious_misconduct_alleged") == "yes" else "no"
             row["authority_serious_misconduct_finding"] = authority_serious_status(row, root)
             row["serious_misconduct_review_status"] = "assistant_operative_text_review"

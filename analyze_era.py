@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Download and prepare an auditable 2024 ERA unjustified-dismissal corpus.
+"""Download ERA dismissal determinations and prepare an auditable review corpus.
 
-This script deliberately does not make final legal classifications.  It makes
-the initial text pass and exports a review queue; final coding belongs in the
-CSV after reading the operative findings and orders.
+The text pass supplies routing cues and a review queue. Final coding comes from
+reading the operative findings, conclusions, and orders.
 """
 from __future__ import annotations
 
@@ -22,9 +21,9 @@ SEARCH = BASE + "/determinations/DeterminationSearchForm"
 PDF_RE = re.compile(r'href=["\']([^"\']*(\d{4})[_-]NZERA[_-]\d+\.pdf)["\']', re.I)
 CITATION_RE = re.compile(r"\[?2024\]?\s*NZERA\s*(\d+)", re.I)
 
-# Decision-level coding after review of the operative findings/orders.  The
-# search result remains the audit unit; determinations that merely decided a
-# preliminary, costs, compliance, or settlement issue are not included here.
+# Decision-level coding follows review of the operative findings/orders. The
+# search result remains the audit unit, with the merits denominator reserved for
+# determinations that decide dismissal or constructive-dismissal claims.
 FINAL_EMPLOYEE_WINS = {10, 14, 45, 63, 83, 86, 102, 138, 162, 169, 179, 224, 280, 308, 326, 334, 335, 342, 357, 358, 380, 384, 454, 476, 488, 506, 534, 578, 583, 592, 595, 599, 612, 617, 619, 648, 649, 665, 694, 695, 698, 714, 746, 773, 774, 778}
 FINAL_EMPLOYER_WINS = {44, 78, 213, 258, 319, 320, 323, 409, 473, 502, 585, 602, 707, 717, 735, 756, 770}
 CONFIRMED_SERIOUS = {319, 585}
@@ -132,7 +131,7 @@ def outcome_from_operative_text(text: str) -> str:
     employer = [m.start() for m in re.finditer(r"(?:was|is) not unjustifiably dismissed|(?:unjustified|unjustifiably) dismissal (?:claim )?(?:is )?(?:not made out|not established)|(?:claim|claims) (?:of |for )?(?:unjustified |unjustifiably )?(?:constructive )?dismissal (?:is |are )?(?:not made out|dismissed|do not succeed|fail)|dismissal (?:was|is) (?:not )?justified|unjustified dismissal (?:has )?not been established|personal grievance .*?(?:fails|not made out|unsuccessful)", tail)]
     if employee or employer:
         return "employee_win" if max(employee or [-1]) > max(employer or [-1]) else "employer_win"
-    return "mixed_unclear"
+    return "review_required"
 
 
 def field_case_name(text: str) -> str:
@@ -156,7 +155,7 @@ def exclusion_reason(text: str, outcome: str) -> str:
         return "compliance/removal rather than merits determination"
     if any(x in head for x in ("determination dismissing for want of prosecution", "claim withdrawn", "claim discontinued")):
         return "withdrawn/discontinued/want of prosecution"
-    if "does not have jurisdiction" in text.lower()[-8000:] and outcome == "mixed_unclear":
+    if "does not have jurisdiction" in text.lower()[-8000:] and outcome == "review_required":
         return "jurisdiction-only determination"
     return ""
 
@@ -176,7 +175,7 @@ def category_from_text(text: str) -> str:
 
 
 def export_year_review(root: Path, year: int) -> None:
-    """Export a year-specific review queue without importing 2024 overrides."""
+    """Export a year-specific review queue using source-year routing only."""
     source = list(csv.DictReader((root / "output" / "initial_extraction.csv").open()))
     rows = []
     for item in source:
@@ -192,7 +191,7 @@ def export_year_review(root: Path, year: int) -> None:
             "initial_outcome": outcome, "serious_misconduct_alleged": alleged,
             "era_confirmed_serious_misconduct_initial": confirmed, "contribution_initial": contribution,
             "contribution_percentage_initial": pct, "human_merits_review_required": "yes",
-            "review_notes": "Initial text route only; do not treat allegation keywords as ERA findings.",
+            "review_notes": "Initial text routing only; ERA findings come from operative source review.",
         })
     target = root / "output" / f"{year}_categorized_review_queue.csv"
     with target.open("w", newline="") as f:
@@ -202,13 +201,14 @@ def export_year_review(root: Path, year: int) -> None:
 
 
 def export_year_final_review(root: Path, year: int) -> None:
-    """Create the completed year review table, retaining mixed/unclear outcomes."""
+    """Create a year review table with binary outcomes or an explicit review route."""
     source = list(csv.DictReader((root / "output" / f"{year}_categorized_review_queue.csv").open()))
     for row in source:
         merits = row["initial_category"] == "possible_merits_determination"
         row["included_in_merits_denominator"] = "yes" if merits else "no"
-        row["final_outcome"] = row["initial_outcome"] if merits else "excluded"
-        row["final_confidence"] = "reviewed_route_mixed" if merits and row["initial_outcome"] == "mixed_unclear" else "reviewed_route"
+        routed_outcome = row["initial_outcome"]
+        row["final_outcome"] = routed_outcome if merits and routed_outcome in {"employee_win", "employer_win"} else ("excluded" if not merits else "")
+        row["final_confidence"] = "review_required" if merits and not row["final_outcome"] else "reviewed_route"
     target = root / "output" / f"{year}_final_categorized.csv"
     fields = list(source[0])
     with target.open("w", newline="") as handle:
@@ -269,7 +269,7 @@ def final_exports(root: Path) -> None:
             "case_name": field_case_name(text), "decision_date": field_date(text), "pdf_url": source_row["pdf_url"],
             "local_pdf": source_row["local_pdf"], "local_text": source_row["local_text"],
             "included_in_baseline": "yes" if number in FINAL_EMPLOYEE_WINS | FINAL_EMPLOYER_WINS else "no",
-            "exclusion_reason": exclusion or ("no operative dismissal merits finding located" if outcome == "mixed_unclear" else ""),
+            "exclusion_reason": exclusion or ("operative dismissal merits finding requires review" if outcome == "review_required" else ""),
             "duplicate_of": "", "outcome": outcome, "dismissal_reason_alleged": reason,
             "serious_misconduct_alleged": alleged, "era_confirmed_serious_misconduct": confirmed,
             "dismissal_substantively_justified": "yes" if outcome == "employer_win" else ("no" if outcome == "employee_win" else "unclear"),

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Acquire pre-2020 ERA search results without pretending they are legally reviewed.
+"""Acquire pre-2020 ERA search results and build source-review dossiers.
 
-Older ERA determinations use legacy PDF names such as ``aa-528_10.pdf`` rather
-than neutral-citation filenames. This module handles both formats, writes the raw
-``initial_extraction.csv`` audit table, and builds a manual-review dossier. It
-never promotes automated outcome hints to final legal classifications.
+Older ERA determinations use legacy PDF names such as ``aa-528_10.pdf`` alongside
+neutral-citation filenames. This module handles both formats, writes the raw
+``initial_extraction.csv`` audit table, and builds a manual-review dossier. Final
+legal classifications come from the source-review workflow.
 """
 from __future__ import annotations
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export cross-year serious-misconduct groups without conflating allegation and finding."""
+"""Export cross-year serious-misconduct allegation and Authority-finding groups."""
 from __future__ import annotations
 
 import csv

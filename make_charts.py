@@ -13,7 +13,6 @@ OUT = ROOT / "output" / "charts"
 COLORS = {
     "employee_win": "#1B8A3A",
     "employer_win": "#B54A4A",
-    "mixed_unclear": "#D99A22",
     "excluded": "#B8C2CC",
     "included": "#4E8B73",
     "confirmed_yes": "#B54A4A",
@@ -72,7 +71,7 @@ def text_width(draw: ImageDraw.ImageDraw, text: str, text_font: ImageFont.ImageF
 
 
 def recent_rows() -> list[dict[str, str]]:
-    path = ROOT / "output" / "combined_2020_2025_full_classification.csv"
+    path = ROOT / "output" / "combined_2020_2025_binary_classification.csv"
     with path.open(newline="") as handle:
         return list(csv.DictReader(handle))
 
@@ -89,7 +88,7 @@ def outcome_rows() -> list[dict[str, str]]:
         for row in legacy_rows()
     ]
     rows.extend(
-        {"year": row["year"], "classified_outcome": row["classified_outcome"]}
+        {"year": row["year"], "classified_outcome": row["binary_outcome"]}
         for row in recent_rows()
     )
     return rows
@@ -399,7 +398,7 @@ def main() -> None:
         years,
         {
             "included": [
-                sum(by_year[y][k] for k in ("employee_win", "employer_win", "mixed_unclear"))
+                by_year[y]["employee_win"] + by_year[y]["employer_win"]
                 for y in years
             ],
             "excluded": [by_year[y]["excluded"] for y in years],
@@ -411,32 +410,20 @@ def main() -> None:
         years,
         {
             key: [by_year[y][key] for y in years]
-            for key in ("employee_win", "employer_win", "mixed_unclear", "excluded")
+            for key in ("employee_win", "employer_win", "excluded")
         },
         OUT / "outcomes_by_year.png",
     )
 
-    all_outcome_rates = []
-    binary_rates = []
+    rates = []
     for year in years:
         employee = by_year[year]["employee_win"]
         employer = by_year[year]["employer_win"]
-        mixed = by_year[year]["mixed_unclear"]
-        all_outcome_rates.append(
-            100 * employee / (employee + employer + mixed)
-            if employee + employer + mixed
-            else 0
-        )
-        binary_rates.append(
-            100 * employee / (employee + employer) if employee + employer else 0
-        )
+        rates.append(100 * employee / (employee + employer) if employee + employer else 0)
     line_chart(
         "Employee win rate · 2010–2025",
         years,
-        {
-            "all classified outcomes": all_outcome_rates,
-            "binary outcomes only": binary_rates,
-        },
+        {"employee win rate": rates},
         OUT / "employee_win_rate_by_year.png",
     )
     pie_chart(

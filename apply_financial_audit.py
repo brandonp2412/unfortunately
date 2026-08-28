@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
-"""Apply source-audited financial resolutions to mixed ERA outcomes.
+"""Apply source-audited financial resolutions to review-routed ERA outcomes.
 
-The automatic financial parser is deliberately conservative. A small set of
-mixed determinations was then read directly because their operative orders were
-ambiguous to the parser (for example, an issue framed as a question, an order
-using party names instead of applicant/respondent labels, or an award stated
-without an explicit payer). This module records those source-verified
-resolutions so reruns are deterministic and auditable.
+Direct source review resolves parser-sensitive orders such as question-framed
+amounts, named-party orders, and awards with implicit payers. The recorded
+resolutions keep reruns deterministic and auditable.
 """
 from __future__ import annotations
 
@@ -21,9 +18,8 @@ def normalize_citation(value: str) -> str:
     return "".join(re.findall(r"[a-z0-9]+", (value or "").lower()))
 
 
-# Amounts here are only amounts needed to establish the observable direction
-# where the parser got that direction wrong. They are not intended to be a
-# complete damages database for every case.
+# These amounts establish the audited observable direction for parser-sensitive
+# cases and form the deterministic override set.
 AUDITED_OVERRIDES: dict[str, dict[str, object]] = {
     "2020nzera314": {
         "binary_outcome": "employee_win",
@@ -178,7 +174,7 @@ def write_audit_resolutions(root: Path, rows: list[dict[str, str]]) -> None:
         "employee_money_awarded", "employee_money_adverse", "observable_net_money",
         "financial_audit_status", "financial_audit_note", "pdf_url",
     ]
-    with (root / "output" / "mixed_financial_audit_resolutions.csv").open("w", newline="") as handle:
+    with (root / "output" / "financial_audit_resolutions.csv").open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()
         writer.writerows({field: row.get(field, "") for field in fields} for row in selected)

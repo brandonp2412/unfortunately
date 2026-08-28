@@ -139,8 +139,10 @@ def resolve(row: dict[str, str]) -> dict[str, str]:
     elif reason == "included_without_clear_final_result":
         included = "yes"
         prior = row.get("prior_outcome", "")
-        legal = prior if prior in {"employee_win", "employer_win"} else "mixed_legal"
-        note = "prior case-level merits review retained; no operative evidence of a non-final/procedural disposition"
+        if prior not in {"employee_win", "employer_win"}:
+            raise RuntimeError(f"included merits row requires direct binary review: {row.get('era_citation')}")
+        legal = prior
+        note = "prior case-level merits review retained after scope audit"
         status = "audited_group"
     elif reason in DEFAULT_EXCLUDE:
         included = "no"
@@ -182,12 +184,12 @@ def main() -> None:
         w = csv.DictWriter(handle, fieldnames=afields); w.writeheader()
         w.writerows({f:r.get(f,"") for f in afields} for r in audit)
 
-    sfields = ["year","search_hits","dismissal_merits","excluded","employee_legal_wins","employer_legal_wins","mixed_legal"]
+    sfields = ["year","search_hits","dismissal_merits","excluded","employee_legal_wins","employer_legal_wins"]
     summary=[]
     for year in [str(y) for y in range(2010,2026)]:
         ys=[r for r in final if r["year"]==year]; yi=[r for r in ys if r["final_scope_included"]=="yes"]
         c=Counter(r["final_legal_dismissal_result"] for r in yi)
-        summary.append({"year":year,"search_hits":len(ys),"dismissal_merits":len(yi),"excluded":len(ys)-len(yi),"employee_legal_wins":c["employee_win"],"employer_legal_wins":c["employer_win"],"mixed_legal":c["mixed_legal"]})
+        summary.append({"year":year,"search_hits":len(ys),"dismissal_merits":len(yi),"excluded":len(ys)-len(yi),"employee_legal_wins":c["employee_win"],"employer_legal_wins":c["employer_win"]})
     with (root / "output" / "uniform_scope_summary_final.csv").open("w", newline="") as handle:
         w=csv.DictWriter(handle,fieldnames=sfields); w.writeheader(); w.writerows(summary)
     print(f"final scope: {len(included)} dismissal merits / {len(excluded)} excluded; audit queue=0")

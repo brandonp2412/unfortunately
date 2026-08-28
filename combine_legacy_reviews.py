@@ -58,16 +58,16 @@ def main() -> None:
     lines = [
         "# 2010-2019 manually reviewed ERA dismissal corpus",
         "",
-        "Every source row in this report passed `validate_legacy_review.py`. Automated outcome hints were not accepted as final classifications.",
+        "Every source row passed `validate_legacy_review.py`; final classifications come from source review.",
         "",
-        "| Year | Included merits | Employee win | Employer win | Mixed/unclear |",
-        "|---:|---:|---:|---:|---:|",
+        "| Year | Included merits | Employee win | Employer win |",
+        "|---:|---:|---:|---:|",
     ]
     for year in YEARS:
         counts = by_year[year]
         total = sum(counts.values())
         lines.append(
-            f"| {year} | {total} | {counts['employee_win']} | {counts['employer_win']} | {counts['mixed_unclear']} |"
+            f"| {year} | {total} | {counts['employee_win']} | {counts['employer_win']} |"
         )
     (output / "combined_2010_2019_report.md").write_text("\n".join(lines) + "\n")
     print(f"wrote {len(all_rows)} reviewed rows and {len(substantive)} substantive claims")

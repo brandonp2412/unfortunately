@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Compress review dossiers into readable first-pass and micro review ledgers.
 
-These files do not classify cases. They keep operative material for human review
-and route ambiguous/high-risk rows back to the larger dossier or source PDF.
+The ledgers keep operative material together and route high-risk rows to the
+larger dossier or source PDF for final classification.
 """
 from __future__ import annotations
 
@@ -66,7 +66,7 @@ def build(root: Path, year: int) -> Path:
         contribution_requires_review = contribution_hit(row)
         high_risk = any((
             row.get("candidate_document_category") == "possible_merits_determination"
-            and row.get("candidate_outcome") == "mixed_unclear",
+            and row.get("candidate_outcome") not in {"employee_win", "employer_win"},
             row.get("candidate_serious_misconduct_alleged") == "yes",
             contribution_requires_review,
             int(row.get("text_chars") or 0) < 1000,
