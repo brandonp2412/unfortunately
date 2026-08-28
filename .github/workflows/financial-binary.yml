@@ -5,7 +5,9 @@ on:
     paths:
       - resolve_mixed_financially.py
       - resolve_mixed_financially_parallel.py
+      - apply_financial_audit.py
       - tests/test_resolve_mixed_financially.py
+      - tests/test_apply_financial_audit.py
       - .github/workflows/financial-binary.yml
   workflow_dispatch:
 
@@ -36,20 +38,34 @@ jobs:
       - name: Resolve mixed outcomes from source determinations
         run: python3 resolve_mixed_financially_parallel.py --root . --workers 8
 
+      - name: Apply source-audited financial resolutions
+        run: python3 apply_financial_audit.py --root .
+
       - name: Audit binary result
         run: |
           python3 - <<'PY'
           import csv
           from collections import Counter
+
           rows = list(csv.DictReader(open('output/combined_2020_2025_binary_classification.csv', newline='')))
           mixed = [r for r in rows if r['financial_tiebreak_applied'] == 'yes']
           assert mixed, 'no mixed rows were resolved'
-          assert all(r['binary_outcome'] in {'employee_win','employer_win'} for r in rows if r['classified_outcome'] != 'excluded')
+          substantive = [r for r in rows if r['classified_outcome'] != 'excluded']
+          assert all(r['binary_outcome'] in {'employee_win', 'employer_win'} for r in substantive)
           assert all(r['observable_net_money'] != '' for r in mixed)
+
+          audited = [r for r in rows if r.get('financial_audit_status') in {'audited_override', 'audited_confirmed'}]
+          assert len(audited) == 15, f'expected 15 source-audited mixed cases, got {len(audited)}'
+
+          summary = list(csv.DictReader(open('output/binary_outcome_summary.csv', newline='')))
+          assert summary and summary[-1]['year'] == '2020-2025'
+
           print('rows', len(rows), 'mixed-resolved', len(mixed))
           print('mixed binary counts', Counter(r['binary_outcome'] for r in mixed))
-          print('materially unallocated rows', sum(int(r['unallocated_money_units'] or 0) > 0 for r in mixed))
-          print('both-sides money rows', sum(r.get('both_sides_money') == 'yes' for r in mixed))
+          print('all substantive binary counts', Counter(r['binary_outcome'] for r in substantive))
+          print('source-audited rows', len(audited))
+          for r in summary:
+              print('summary', r)
           PY
 
       - name: Commit binary classification
@@ -59,6 +75,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
             output/combined_2020_2025_binary_classification.csv \
+            output/binary_outcome_summary.csv \
+            output/mixed_financial_audit_resolutions.csv \
             output/mixed_financial_review_queue.csv \
             output/mixed_financial_high_risk.csv \
             output/mixed_financial_outcome_changing_review.csv
@@ -66,6 +84,6 @@ jobs:
             echo "Binary classification already current"
             exit 0
           fi
-          git commit -m "Resolve mixed outcomes with financial tie-breaker"
+          git commit -m "Apply audited financial outcome resolutions"
           git pull --rebase origin master
           git push origin HEAD:master
