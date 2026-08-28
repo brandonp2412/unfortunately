@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - make_charts.py
+      - make_binary_outcome_charts.py
+      - output/combined_2020_2025_binary_classification.csv
       - validate_legacy_review.py
       - .github/workflows/charts.yml
   workflow_dispatch:
@@ -29,8 +31,11 @@ jobs:
       - name: Run tests
         run: python3 -m pytest -q
 
-      - name: Regenerate mobile-friendly charts
+      - name: Regenerate enrichment and baseline charts
         run: python3 make_charts.py
+
+      - name: Overwrite headline charts with audited binary outcomes
+        run: python3 make_binary_outcome_charts.py
 
       - name: Commit regenerated PNGs
         run: |
@@ -42,6 +47,6 @@ jobs:
             echo "Charts already up to date"
             exit 0
           fi
-          git commit -m "Regenerate mobile-friendly charts"
+          git commit -m "Regenerate audited binary charts"
           git pull --rebase origin master
           git push origin HEAD:master

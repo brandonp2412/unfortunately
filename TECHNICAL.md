@@ -4,10 +4,10 @@
 
 The corpus is made from public Employment Relations Authority determinations
 returned by the ERA database search for `unjustified dismissal`. It covers
-2020–2025 in the combined export, with 2010–2019 being added. This estimates
-outcomes among disputes that reached a public determination; it is not an
-employee grievance win probability. Settlements, confidential outcomes,
-abandonment, and disputes never filed are outside the frame.
+2010–2025. This estimates outcomes among disputes that reached a public
+determination; it is not an employee grievance win probability. Settlements,
+confidential outcomes, abandonment, and disputes never filed are outside the
+frame.
 
 ## Legal-review method
 
@@ -21,10 +21,39 @@ The merits baseline excludes costs-only, procedural/interlocutory, compliance or
 removal, withdrawn/discontinued, want-of-prosecution, duplicate/follow-up, and
 non-merits decisions.
 
-An employee win means the Authority found unjustified dismissal, even where
-remedies were reduced for contribution. An employer win means the dismissal was
-found justified or the dismissal grievance was rejected. `mixed_unclear` is
-retained when the determination cannot fairly be reduced to either result.
+The original legal classification is retained in the audit data. A clear
+employee win means the Authority found unjustified dismissal; a clear employer
+win means the dismissal was found justified or the dismissal grievance was
+rejected. The older 2020–2025 classification also contained `mixed_unclear`
+where a determination could not fairly be reduced to either legal result.
+
+## Binary outcome metric
+
+The public headline outcome metric is binary. Clear legal employee/employer
+outcomes are preserved. The 322 2020–2025 rows formerly classified
+`mixed_unclear` are resolved with an observable-money tie-breaker using the
+operative remedies/orders text:
+
+1. identify money ordered in the employee/applicant's favour;
+2. identify money or costs ordered against the employee/applicant;
+3. subtract adverse money from employee-side recovery;
+4. classify a positive observable net as `employee_win`;
+5. classify zero or a negative observable net as `employer_win`.
+
+The parser deliberately ignores claimed amounts, salary examples, settlement
+offers, and other historical dollar figures that are not operative monetary
+orders. Private legal fees and other expenses that are not disclosed or ordered
+in a determination are unknowable and are not invented. This makes the metric
+an observable-order measure rather than a complete accounting-profit measure.
+
+The automatic source-text pass is followed by a targeted audit of ambiguous
+monetary cases. Fifteen cases were directly source-audited in the completed
+2020–2025 pass: 13 have explicit audited overrides and two both-sides-money
+cases were directly confirmed. Those resolutions are stored in
+`output/mixed_financial_audit_resolutions.csv`; the automatic parser output and
+review queues remain available as an audit trail. The final 2020–2025 binary
+output contains 673 substantive decisions: 476 employee wins and 197 employer
+wins (70.7%).
 
 Serious misconduct is split into three distinct ideas:
 
@@ -34,9 +63,9 @@ Serious misconduct is split into three distinct ideas:
 
 Only the third is used for the strict serious-misconduct exclusion. Cases with
 serious/gross/summary-dismissal wording, s 124 contribution, short/OCR-damaged
-text, or a mixed/unclear outcome are re-read before finalization.
+text, or an ambiguous outcome are re-read before finalization.
 
-## 2024 results
+## 2024 strict legal results
 
 | Analysis | Included | Employee wins | Employer wins | Mixed/other | Employee rate (all) |
 |---|---:|---:|---:|---:|---:|
@@ -45,12 +74,21 @@ text, or a mixed/unclear outcome are re-read before finalization.
 | Exclude alleged serious-misconduct dismissals | 52 | 35 | 17 | 0 | 67.3% |
 | Exclude any s 124 contribution | 61 | 44 | 17 | 0 | 72.1% |
 
+These strict 2024 legal-review figures answer a different question from the
+full-corpus binary presentation: they use the hand-reviewed dismissal-merits
+baseline and serious-misconduct exclusions rather than the financial tie-breaker
+for older mixed routing rows.
+
 ## Cross-year classification
 
 The historical exports keep each search result auditable by source URL and
 classification notes. Years are only included in reviewed combined outputs once
 all search-result determinations for that year have a completed case-by-case
 classification.
+
+For the headline 2010–2025 outcome charts, 2010–2019 use the completed strict
+binary legal review and 2020–2025 use the audited binary output described above.
+The original 2020–2025 legal classification remains published separately.
 
 ## Context enrichment
 
@@ -77,11 +115,18 @@ remain `not_stated` for annualized fields.
 - `make_legacy_review_brief.py` — compact navigation aid for exhaustive review.
 - `validate_legacy_reviews.py` — refuse incomplete reviewed-year exports.
 - `combine_years.py` — combine year-level exports.
-- `full_classification.py` — build combined classification exports.
+- `full_classification.py` — build combined legal-classification exports.
+- `resolve_mixed_financially.py` / `resolve_mixed_financially_parallel.py` — extract monetary order signals for previously mixed 2020–2025 rows.
+- `apply_financial_audit.py` — apply the source-audited monetary resolutions and generate binary summaries.
 - `enrich_context.py` — add context categories and salary normalization.
-- `make_charts.py` — generate PNG charts using Pillow.
-- `output/baseline_substantive_claims.csv` — 2024 substantive baseline.
-- `output/combined_2020_2025_full_classification.csv` — historical audit export.
+- `make_charts.py` — generate enrichment/baseline PNG charts using Pillow.
+- `make_binary_outcome_charts.py` — overwrite the headline outcome charts from the audited binary dataset.
+- `output/baseline_substantive_claims.csv` — 2024 substantive strict baseline.
+- `output/combined_2010_2019_strict_classification.csv` — completed legacy strict classification.
+- `output/combined_2020_2025_full_classification.csv` — original 2020–2025 legal classification.
+- `output/combined_2020_2025_binary_classification.csv` — audited 2020–2025 binary presentation.
+- `output/binary_outcome_summary.csv` — per-year 2020–2025 binary totals and rates.
+- `output/mixed_financial_audit_resolutions.csv` — source-audited ambiguous monetary cases.
 - `output/charts/` — generated visualizations.
 
 PDFs and extracted text may be retained outside Git because they are bulk source

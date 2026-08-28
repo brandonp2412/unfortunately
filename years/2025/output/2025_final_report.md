@@ -8,18 +8,23 @@ The official 2025 search returned 234 unique PDFs. The completed routing is:
 - 2 compliance/removal determinations excluded;
 - 1 withdrawal/non-prosecution candidate excluded.
 
-Among the 173 possible merits determinations, the outcome coding is:
+The original legal routing among the 173 possible merits determinations was:
 
-| Outcome | Count |
+| Original legal outcome | Count |
 |---|---:|
 | Employee win | 75 |
 | Employer win | 16 |
 | Mixed/unclear | 82 |
 
-Employee-win rate is 43.4% using all 173 merits rows, and 82.4% using only
-the 91 binary employee/employer rows.
+For the public binary outcome metric, the mixed/unclear rows are resolved from the operative monetary orders. Clear legal outcomes are preserved; for mixed rows, a positive observable employee-side net recovery is an employee win and zero or negative observable recovery is an employer win.
 
-The 2025 file preserves mixed/unclear cases instead of forcing a binary result.
-Serious-misconduct fields are initial text-route flags and require the same
-operative-findings legal verification as the 2024 work; they must not be read
-as ERA-confirmed findings without that review.
+| Audited binary outcome | Count |
+|---|---:|
+| Employee win | 119 |
+| Employer win | 54 |
+
+The final 2025 employee-win rate is therefore **68.8% (119/173)** under the audited binary presentation.
+
+The original `mixed_unclear` coding remains in the legal-classification export for auditability. The binary result is in `../../output/combined_2020_2025_binary_classification.csv`, with source-audited ambiguous monetary cases recorded in `../../output/mixed_financial_audit_resolutions.csv`.
+
+Serious-misconduct routing fields are separate from the binary financial tie-breaker and must not be read as ERA-confirmed serious-misconduct findings unless the operative findings establish that conclusion.
