@@ -68,7 +68,7 @@ def validate(root: Path, year: int) -> list[str]:
         included = row.get("included_in_merits_denominator", "")
         outcome = row.get("final_outcome", "")
 
-        require(errors, row.get("manual_review_status") == "reviewed", label, "review status must be reviewed")
+        require(errors, row.get("manual_review_status") == "reviewed", label, "manual_review_status must be reviewed")
         require(errors, bool(row.get("manual_review_notes", "").strip()), label, "review notes are required")
         require(errors, row.get("confidence") in CONFIDENCE, label, "confidence must be high/medium/low")
         require(errors, category == INCLUDED_CATEGORY or category in EXCLUDED_CATEGORIES, label, "invalid or missing document_category")
