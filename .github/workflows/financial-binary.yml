@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - resolve_mixed_financially.py
+      - resolve_mixed_financially_parallel.py
       - tests/test_resolve_mixed_financially.py
       - .github/workflows/financial-binary.yml
   workflow_dispatch:
@@ -33,7 +34,7 @@ jobs:
         run: python3 -m pytest -q
 
       - name: Resolve mixed outcomes from source determinations
-        run: python3 resolve_mixed_financially.py --root .
+        run: python3 resolve_mixed_financially_parallel.py --root . --workers 8
 
       - name: Audit binary result
         run: |
