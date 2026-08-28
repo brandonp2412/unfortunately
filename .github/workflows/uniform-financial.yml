@@ -1,0 +1,85 @@
+name: Uniform financial classification
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - uniform_financial.py
+      - combine_uniform_financial.py
+      - apply_financial_audit.py
+      - tests/test_uniform_financial.py
+      - .github/workflows/uniform-financial.yml
+
+permissions:
+  contents: write
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install test dependencies
+        run: python3 -m pip install --disable-pip-version-check pytest
+      - name: Run tests
+        run: python3 -m pytest -q
+
+  score:
+    needs: test
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        year: [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PDF text extractor
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y poppler-utils
+      - name: Score substantive determinations
+        run: python3 uniform_financial.py --root . --year ${{ matrix.year }} --workers 4
+      - name: Upload year result
+        uses: actions/upload-artifact@v4
+        with:
+          name: uniform-financial-${{ matrix.year }}
+          path: output/uniform_financial/${{ matrix.year }}.csv
+          if-no-files-found: error
+          retention-days: 7
+
+  combine:
+    needs: score
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Download all year results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: uniform-financial-*
+          path: output/uniform_financial
+          merge-multiple: true
+      - name: Combine and audit
+        run: python3 combine_uniform_financial.py --root .
+      - name: Commit uniform financial outputs
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            output/uniform_financial/*.csv \
+            output/uniform_financial_2010_2025.csv \
+            output/uniform_financial_audit_queue.csv \
+            output/uniform_financial_summary.csv \
+            output/uniform_financial_progress.txt
+          if git diff --cached --quiet; then
+            echo "Uniform financial outputs already current"
+            exit 0
+          fi
+          git commit -m "Score all substantive cases with uniform financial metric"
+          git pull --rebase origin master
+          git push origin HEAD:master
