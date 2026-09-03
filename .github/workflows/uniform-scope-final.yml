@@ -19,9 +19,10 @@ jobs:
   finalize:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Apply completed scope audit
         run: python3 publish_uniform_scope.py
@@ -47,6 +48,8 @@ jobs:
           PY
 
       - name: Commit audited scope outputs
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -54,5 +57,6 @@ jobs:
           git add output/uniform_scope_2010_2025_final.csv output/uniform_scope_audit_resolutions.csv output/uniform_scope_summary_final.csv
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "Publish audited 2010-2025 dismissal denominator"
+          gh auth setup-git
           git pull --rebase origin master
           git push origin HEAD:master
