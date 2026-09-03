@@ -20,9 +20,10 @@ jobs:
   charts:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install dependencies
         run: python3 -m pip install --disable-pip-version-check pillow pytest
@@ -34,6 +35,8 @@ jobs:
         run: python3 make_charts.py
 
       - name: Commit regenerated PNGs
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -44,5 +47,6 @@ jobs:
             exit 0
           fi
           git commit -m "Regenerate audited binary charts"
+          gh auth setup-git
           git pull --rebase origin master
           git push origin HEAD:master
