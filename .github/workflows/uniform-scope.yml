@@ -8,19 +8,25 @@ on:
       - combine_uniform_scope.py
       - tests/test_uniform_scope.py
       - .github/workflows/uniform-scope.yml
+
 permissions:
   actions: read
-  contents: write
+  contents: read
+
 concurrency:
   group: uniform-scope
   cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - run: python3 -m pip install --disable-pip-version-check pytest
       - run: python3 -m pytest -q
+
   scope:
     needs: test
     runs-on: ubuntu-24.04
@@ -30,7 +36,9 @@ jobs:
       matrix:
         year: [2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - name: Install PDF extractor
         if: matrix.year >= 2020
         run: |
@@ -38,7 +46,7 @@ jobs:
           sudo apt-get install -y poppler-utils
       - name: Download legacy acquisition artifact
         if: matrix.year < 2020
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}
@@ -48,26 +56,33 @@ jobs:
           merge-multiple: true
       - name: Classify uniform scope
         run: python3 uniform_scope.py --root . --year ${{ matrix.year }} --workers 4
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: uniform-scope-${{ matrix.year }}
           path: output/uniform_scope/${{ matrix.year }}.csv
           retention-days: 7
           if-no-files-found: error
+
   combine:
     needs: scope
     runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v4
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: uniform-scope-*
           path: output/uniform_scope
           merge-multiple: true
       - run: python3 combine_uniform_scope.py --root .
       - name: Commit scope outputs
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -75,5 +90,6 @@ jobs:
           git add output/uniform_scope/*.csv output/uniform_scope_2010_2025.csv output/uniform_scope_audit_queue.csv output/uniform_scope_summary.csv
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "Apply uniform dismissal-merits scope pass"
+          gh auth setup-git
           git pull --rebase origin master
           git push origin HEAD:master
