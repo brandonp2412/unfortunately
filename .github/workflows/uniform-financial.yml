@@ -11,7 +11,7 @@ on:
       - .github/workflows/uniform-financial.yml
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   PYTHONUNBUFFERED: "1"
@@ -20,7 +20,9 @@ jobs:
   test:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - name: Install test dependencies
         run: python3 -m pip install --disable-pip-version-check pytest
       - name: Run tests
@@ -35,7 +37,9 @@ jobs:
       matrix:
         year: [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - name: Install PDF text extractor
         run: |
           sudo apt-get update -qq
@@ -43,7 +47,7 @@ jobs:
       - name: Score substantive determinations
         run: python3 uniform_financial.py --root . --year ${{ matrix.year }} --workers 4
       - name: Upload year result
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: uniform-financial-${{ matrix.year }}
           path: output/uniform_financial/${{ matrix.year }}.csv
@@ -53,12 +57,15 @@ jobs:
   combine:
     needs: score
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Download all year results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: uniform-financial-*
           path: output/uniform_financial
@@ -66,6 +73,8 @@ jobs:
       - name: Combine and audit
         run: python3 combine_uniform_financial.py --root .
       - name: Commit uniform financial outputs
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -81,5 +90,6 @@ jobs:
             exit 0
           fi
           git commit -m "Score all substantive cases with uniform financial metric"
+          gh auth setup-git
           git pull --rebase origin master
           git push origin HEAD:master
