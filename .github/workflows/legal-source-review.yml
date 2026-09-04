@@ -1,0 +1,65 @@
+name: Resolve queued legal outcomes from ERA sources
+
+on:
+  push:
+    paths:
+      - resolve_legal_review.py
+      - analyze_era.py
+      - build_outcome_summaries.py
+      - output/combined_2020_2025_binary_classification.csv
+      - .github/workflows/legal-source-review.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: legal-source-review-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install extraction dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils tesseract-ocr
+          python3 -m pip install --disable-pip-version-check pillow pytest
+
+      - name: Run tests
+        run: python3 -m pytest -q
+
+      - name: Build current legal review queue
+        run: python3 build_outcome_summaries.py
+
+      - name: Resolve explicit operative findings from source PDFs
+        run: python3 resolve_legal_review.py --workers 6
+
+      - name: Rebuild canonical summaries with source resolutions
+        run: |
+          python3 build_outcome_summaries.py
+          python3 make_dual_outcome_charts.py
+
+      - name: Commit source-review evidence and regenerated outputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add output/headline output/charts/legal_*.png output/charts/monetary_*.png output/charts/legal_vs_monetary_*.png
+          if git diff --cached --quiet; then
+            echo "Source-review outputs already up to date"
+            exit 0
+          fi
+          git commit -m "Resolve explicit legal outcomes from ERA sources [skip ci]"
+          gh auth setup-git
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
