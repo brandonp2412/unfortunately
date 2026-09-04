@@ -13,14 +13,14 @@ import csv
 import re
 import time
 from pathlib import Path
-from urllib.parse import urlencode, urljoin
+from urllib.parse import urljoin
 
 import analyze_era
 from build_review_dossier import build as build_review_dossier
+from era_search import all_result_pdf_urls
 
 
 BASE = analyze_era.BASE
-SEARCH = analyze_era.SEARCH
 PDF_RE = re.compile(
     r'href=["\']([^"\']*/assets/elawpdf/(\d{4})/[^"\']+\.pdf)["\']',
     re.I,
@@ -29,7 +29,7 @@ CITATION_RE = re.compile(r"\[?(\d{4})\]?\s*NZERA\s*(\d+)", re.I)
 
 
 def extract_pdf_urls_for_year(html: str, year: int) -> list[str]:
-    """Return first-seen ERA PDF URLs belonging to the requested year."""
+    """Parse legacy pages that still expose direct PDF links."""
     urls: list[str] = []
     for value, found_year in PDF_RE.findall(html):
         if int(found_year) != year:
@@ -67,28 +67,8 @@ def field_date(text: str, year: int) -> str:
 
 
 def all_result_urls(root: Path, year: int) -> list[str]:
-    """Fetch every result page and preserve first-seen unique PDF URLs."""
-    urls: list[str] = []
-    for start in range(0, 2000, 10):
-        params = {
-            "Keywords": "unjustified dismissal",
-            "DateFrom": f"{year}-01-01",
-            "DateTo": f"{year}-12-31",
-            "action_doSearch": "Search",
-            "start": start,
-        }
-        page = root / "data" / f"search_page_{start:03d}.html"
-        page.parent.mkdir(parents=True, exist_ok=True)
-        if not page.exists():
-            page.write_bytes(analyze_era.fetch(SEARCH + "?" + urlencode(params)))
-            time.sleep(0.15)
-        found = extract_pdf_urls_for_year(page.read_text(errors="replace"), year)
-        if not found:
-            break
-        for url in found:
-            if url not in urls:
-                urls.append(url)
-    return urls
+    """Search the current ERA site and resolve first-seen results to PDFs."""
+    return all_result_pdf_urls(root, year, "unjustified dismissal")
 
 
 def build_corpus(root: Path, year: int) -> None:
