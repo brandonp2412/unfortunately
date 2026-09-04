@@ -6,10 +6,11 @@ import pytest
 from combine_uniform_financial import YEARS, load_rows, validate_rows
 
 
-def write_year(root: Path, year: int, suffix: str | None = None) -> None:
+def write_year(root: Path, year: int, suffix: str | None = None, stored_citation: str | None = None) -> None:
     out = root / "output" / "uniform_financial"
     out.mkdir(parents=True, exist_ok=True)
     token = suffix or str(year)
+    number = int(token) if token.isdigit() else year
     with (out / f"{year}.csv").open("w", newline="") as handle:
         writer = csv.DictWriter(
             handle,
@@ -18,8 +19,8 @@ def write_year(root: Path, year: int, suffix: str | None = None) -> None:
         writer.writeheader()
         writer.writerow({
             "year": str(year),
-            "era_citation": f"{year}_NZERA_{token}",
-            "pdf_url": f"https://example.invalid/{token}.pdf",
+            "era_citation": stored_citation or f"{year}_NZERA_{number}",
+            "pdf_url": f"https://determinations.era.govt.nz/assets/elawpdf/{year}/{year}-NZERA-{number}.pdf",
             "financial_binary_outcome": "employee_win",
         })
 
@@ -30,6 +31,16 @@ def test_load_and_validate_accept_dynamic_corpus_size(tmp_path: Path) -> None:
     rows = load_rows(tmp_path)
     validate_rows(rows)
     assert len(rows) == len(YEARS)
+
+
+def test_load_rows_repairs_stale_cross_year_citation_from_url(tmp_path: Path) -> None:
+    for year in YEARS:
+        write_year(tmp_path, year)
+    write_year(tmp_path, 2025, suffix="266", stored_citation="[2024] NZERA 668")
+    rows = load_rows(tmp_path)
+    row = next(row for row in rows if row["year"] == "2025")
+    assert row["era_citation"] == "2025 NZERA 266"
+    validate_rows(rows)
 
 
 def test_load_rows_rejects_empty_year_file(tmp_path: Path) -> None:
