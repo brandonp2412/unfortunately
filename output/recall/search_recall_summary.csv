@@ -1,65 +1,65 @@
 year,query,search_hits,additional_vs_primary,primary_not_returned_by_query
-2010,unjustified dismissal,0,0,0
-2010,unjustifiably dismissed,0,0,0
-2010,dismissal was not justified,0,0,0
-2010,constructive dismissal,0,0,0
-2011,unjustified dismissal,0,0,0
-2011,unjustifiably dismissed,0,0,0
-2011,dismissal was not justified,0,0,0
-2011,constructive dismissal,0,0,0
-2012,unjustified dismissal,0,0,0
-2012,unjustifiably dismissed,0,0,0
-2012,dismissal was not justified,0,0,0
-2012,constructive dismissal,0,0,0
-2013,unjustified dismissal,0,0,0
-2013,unjustifiably dismissed,0,0,0
-2013,dismissal was not justified,0,0,0
-2013,constructive dismissal,0,0,0
-2014,unjustified dismissal,0,0,0
-2014,unjustifiably dismissed,0,0,0
-2014,dismissal was not justified,0,0,0
-2014,constructive dismissal,0,0,0
-2015,unjustified dismissal,0,0,0
-2015,unjustifiably dismissed,0,0,0
-2015,dismissal was not justified,0,0,0
-2015,constructive dismissal,0,0,0
-2016,unjustified dismissal,0,0,0
-2016,unjustifiably dismissed,0,0,0
-2016,dismissal was not justified,0,0,0
-2016,constructive dismissal,0,0,0
-2017,unjustified dismissal,0,0,0
-2017,unjustifiably dismissed,0,0,0
-2017,dismissal was not justified,0,0,0
-2017,constructive dismissal,0,0,0
-2018,unjustified dismissal,0,0,0
-2018,unjustifiably dismissed,0,0,0
-2018,dismissal was not justified,0,0,0
-2018,constructive dismissal,0,0,0
-2019,unjustified dismissal,0,0,0
-2019,unjustifiably dismissed,0,0,0
-2019,dismissal was not justified,0,0,0
-2019,constructive dismissal,0,0,0
-2020,unjustified dismissal,0,0,0
-2020,unjustifiably dismissed,0,0,0
-2020,dismissal was not justified,0,0,0
-2020,constructive dismissal,0,0,0
-2021,unjustified dismissal,0,0,0
-2021,unjustifiably dismissed,0,0,0
-2021,dismissal was not justified,0,0,0
-2021,constructive dismissal,0,0,0
-2022,unjustified dismissal,0,0,0
-2022,unjustifiably dismissed,0,0,0
-2022,dismissal was not justified,0,0,0
-2022,constructive dismissal,0,0,0
-2023,unjustified dismissal,0,0,0
-2023,unjustifiably dismissed,0,0,0
-2023,dismissal was not justified,0,0,0
-2023,constructive dismissal,0,0,0
-2024,unjustified dismissal,0,0,0
-2024,unjustifiably dismissed,0,0,0
-2024,dismissal was not justified,0,0,0
-2024,constructive dismissal,0,0,0
-2025,unjustified dismissal,0,0,0
-2025,unjustifiably dismissed,0,0,0
-2025,dismissal was not justified,0,0,0
-2025,constructive dismissal,0,0,0
+2010,unjustified dismissal,1079,0,0
+2010,unjustifiably dismissed,1310,369,138
+2010,dismissal was not justified,2020,949,8
+2010,constructive dismissal,995,0,84
+2011,unjustified dismissal,880,0,0
+2011,unjustifiably dismissed,1112,306,74
+2011,dismissal was not justified,1669,789,0
+2011,constructive dismissal,799,0,81
+2012,unjustified dismissal,934,0,0
+2012,unjustifiably dismissed,1120,268,82
+2012,dismissal was not justified,1638,704,0
+2012,constructive dismissal,902,0,32
+2013,unjustified dismissal,1052,0,0
+2013,unjustifiably dismissed,1306,354,100
+2013,dismissal was not justified,1860,810,2
+2013,constructive dismissal,986,0,66
+2014,unjustified dismissal,885,0,0
+2014,unjustifiably dismissed,1125,316,76
+2014,dismissal was not justified,1598,715,2
+2014,constructive dismissal,830,0,55
+2015,unjustified dismissal,718,0,0
+2015,unjustifiably dismissed,906,244,56
+2015,dismissal was not justified,1351,633,0
+2015,constructive dismissal,686,0,32
+2016,unjustified dismissal,761,0,0
+2016,unjustifiably dismissed,945,255,71
+2016,dismissal was not justified,1440,679,0
+2016,constructive dismissal,695,0,66
+2017,unjustified dismissal,682,0,0
+2017,unjustifiably dismissed,842,216,56
+2017,dismissal was not justified,1380,700,2
+2017,constructive dismissal,614,0,68
+2018,unjustified dismissal,568,0,0
+2018,unjustifiably dismissed,660,154,62
+2018,dismissal was not justified,1160,596,4
+2018,constructive dismissal,524,0,44
+2019,unjustified dismissal,542,0,0
+2019,unjustifiably dismissed,618,178,102
+2019,dismissal was not justified,1230,692,4
+2019,constructive dismissal,490,0,52
+2020,unjustified dismissal,314,0,0
+2020,unjustifiably dismissed,346,100,68
+2020,dismissal was not justified,752,444,6
+2020,constructive dismissal,270,0,44
+2021,unjustified dismissal,250,0,0
+2021,unjustifiably dismissed,316,126,60
+2021,dismissal was not justified,582,338,6
+2021,constructive dismissal,236,0,14
+2022,unjustified dismissal,308,0,0
+2022,unjustifiably dismissed,398,176,86
+2022,dismissal was not justified,640,336,4
+2022,constructive dismissal,286,0,22
+2023,unjustified dismissal,238,0,0
+2023,unjustifiably dismissed,332,174,80
+2023,dismissal was not justified,568,332,2
+2023,constructive dismissal,222,0,16
+2024,unjustified dismissal,264,0,0
+2024,unjustifiably dismissed,384,214,94
+2024,dismissal was not justified,696,438,6
+2024,constructive dismissal,238,0,26
+2025,unjustified dismissal,472,0,0
+2025,unjustifiably dismissed,548,208,132
+2025,dismissal was not justified,940,486,18
+2025,constructive dismissal,410,0,62
