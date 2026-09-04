@@ -10,6 +10,7 @@ from pathlib import Path
 
 BINARY = {"employee_win", "employer_win"}
 YEARS = tuple(str(year) for year in range(2010, 2026))
+SOURCE_RESOLUTION_STATUS = "explicit_source_cue_agreement"
 
 
 def read_csv(path: Path) -> list[dict[str, str]]:
@@ -35,6 +36,32 @@ def _unique_by_url(rows: list[dict[str, str]], label: str) -> list[dict[str, str
             raise ValueError(f"duplicate {label} pdf_url: {url}")
         seen[url] = row
     return list(seen.values())
+
+
+def source_resolved_legal_rows(root: Path) -> list[dict[str, str]]:
+    path = root / "output" / "headline" / "legal_source_resolutions.csv"
+    if not path.exists():
+        return []
+    rows: list[dict[str, str]] = []
+    for row in read_csv(path):
+        outcome = row.get("legal_outcome", "")
+        if not outcome:
+            continue
+        if outcome not in BINARY:
+            raise ValueError(f"invalid source-resolved legal outcome {outcome!r} for {row.get('pdf_url', '')}")
+        if row.get("source_resolution_status") != SOURCE_RESOLUTION_STATUS:
+            raise ValueError(f"binary source resolution lacks required status for {row.get('pdf_url', '')}")
+        if not row.get("evidence_excerpt", "").strip():
+            raise ValueError(f"binary source resolution lacks evidence for {row.get('pdf_url', '')}")
+        rows.append({
+            "year": row["year"],
+            "era_citation": row.get("era_citation", ""),
+            "case_name": row.get("case_name", ""),
+            "pdf_url": row["pdf_url"],
+            "outcome": outcome,
+            "source": f"{path.relative_to(root)}:{SOURCE_RESOLUTION_STATUS}",
+        })
+    return _unique_by_url(rows, "source-resolved legal")
 
 
 def legal_rows(root: Path) -> list[dict[str, str]]:
@@ -67,7 +94,18 @@ def legal_rows(root: Path) -> list[dict[str, str]]:
                 "outcome": outcome,
                 "source": str(recent_path.relative_to(root)),
             })
-    return _unique_by_url(rows, "legal")
+
+    base = {row["pdf_url"]: row for row in _unique_by_url(rows, "legal")}
+    for resolved in source_resolved_legal_rows(root):
+        previous = base.get(resolved["pdf_url"])
+        if previous and previous["outcome"] != resolved["outcome"]:
+            raise ValueError(
+                f"source resolution conflicts with existing legal outcome for {resolved['pdf_url']}: "
+                f"{previous['outcome']} vs {resolved['outcome']}"
+            )
+        if previous is None:
+            base[resolved["pdf_url"]] = resolved
+    return list(base.values())
 
 
 def monetary_rows(root: Path) -> list[dict[str, str]]:
@@ -175,7 +213,7 @@ def unresolved_legal_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
             "case_name": row["case_name"],
             "pdf_url": row["pdf_url"],
             "monetary_outcome": row["monetary_outcome"],
-            "legal_review_status": "direct_source_review_required",
+            "legal_review_status": "manual_direct_source_review_required",
         }
         for row in rows
         if row["monetary_outcome"] and not row["legal_outcome"]
@@ -207,7 +245,7 @@ The repository publishes two different outcome measures. They are intentionally 
 
 **Monetary outcome** asks whether the employee obtained a positive observable net monetary order in the public determination. Zero observable employee recovery, or a net adverse order, is an employer-side monetary outcome. This is not a legal-merits classification.
 
-Legal merits currently has a reviewed binary result for **{legal_n} of {money_n} determinations in the monetary corpus ({coverage:.1f}% coverage)**. The remaining **{unresolved_count} determinations require direct legal-merits source review** and are listed in `legal_review_queue.csv`; their monetary outcome is not used as a substitute legal result.
+Legal merits currently has a binary result for **{legal_n} of {money_n} determinations in the monetary corpus ({coverage:.1f}% coverage)**. Direct-source automated resolutions are accepted only when two independent legal-text matchers agree and an evidence excerpt is retained. The remaining **{unresolved_count} determinations require manual direct legal-merits source review** and are listed in `legal_review_queue.csv`; their monetary outcome is not used as a substitute legal result.
 
 There are **{paired['paired_cases']} determinations with both measures**. Among those paired cases, the two measures disagree in **{paired['disagreements']} cases ({paired['disagreement_rate']}%)**.
 
@@ -246,9 +284,10 @@ def build(root: Path) -> dict[str, object]:
     legal_total = int(legal_summary[-1]["cases"])
     money_total = int(monetary_summary[-1]["cases"])
     coverage = 100 * legal_total / money_total if money_total else 0.0
+    source_resolved = len(source_resolved_legal_rows(root))
     totals = {"legal": legal_summary[-1], "monetary": monetary_summary[-1], "paired": comparison[-1]}
     manifest = {
-        "schema_version": 2,
+        "schema_version": 3,
         "period": "2010-2025",
         "corpus": {
             "description": "ERA determination search-derived dismissal corpus",
@@ -262,12 +301,14 @@ def build(root: Path) -> dict[str, object]:
                 "sources": [
                     "output/combined_2010_2019_strict_classification.csv",
                     "output/combined_2020_2025_binary_classification.csv:original_legal_outcome",
+                    "output/headline/legal_source_resolutions.csv:explicit_source_cue_agreement",
                 ],
+                "source_resolved_additions": source_resolved,
                 "binary_classification_coverage": {
                     "classified": legal_total,
                     "reference_monetary_corpus": money_total,
                     "coverage_percent": round(coverage, 1),
-                    "unresolved_direct_review": len(unresolved),
+                    "unresolved_manual_direct_review": len(unresolved),
                     "review_queue": "output/headline/legal_review_queue.csv",
                 },
             },
