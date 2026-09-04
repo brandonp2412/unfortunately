@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - audit_search_recall.py
+      - era_search.py
       - analyze_era.py
       - .github/workflows/search-recall.yml
   workflow_dispatch:
