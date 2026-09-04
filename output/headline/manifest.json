@@ -15,12 +15,12 @@
         "output/combined_2020_2025_binary_classification.csv:original_legal_outcome",
         "output/headline/legal_source_resolutions.csv:explicit_source_cue_agreement"
       ],
-      "source_resolved_additions": 17,
+      "source_resolved_additions": 0,
       "binary_classification_coverage": {
-        "classified": 2741,
+        "classified": 2724,
         "reference_monetary_corpus": 3046,
-        "coverage_percent": 90.0,
-        "unresolved_manual_direct_review": 305,
+        "coverage_percent": 89.4,
+        "unresolved_manual_direct_review": 322,
         "review_queue": "output/headline/legal_review_queue.csv"
       }
     },
@@ -33,10 +33,10 @@
   "totals": {
     "legal": {
       "year": "2010-2025",
-      "cases": "2741",
-      "employee_wins": "1762",
-      "employer_wins": "979",
-      "employee_win_rate": "64.3"
+      "cases": "2724",
+      "employee_wins": "1746",
+      "employer_wins": "978",
+      "employee_win_rate": "64.1"
     },
     "monetary": {
       "year": "2010-2025",
@@ -47,15 +47,15 @@
     },
     "paired": {
       "year": "2010-2025",
-      "paired_cases": "2741",
-      "legal_employee_wins": "1762",
-      "legal_employee_win_rate": "64.3",
-      "monetary_employee_wins": "1702",
-      "monetary_employee_win_rate": "62.1",
-      "disagreements": "630",
+      "paired_cases": "2724",
+      "legal_employee_wins": "1746",
+      "legal_employee_win_rate": "64.1",
+      "monetary_employee_wins": "1689",
+      "monetary_employee_win_rate": "62.0",
+      "disagreements": "627",
       "disagreement_rate": "23.0",
       "legal_only": "0",
-      "monetary_only": "305"
+      "monetary_only": "322"
     }
   }
 }

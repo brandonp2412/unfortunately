@@ -4,16 +4,16 @@ The repository publishes two different outcome measures. They are intentionally 
 
 | Measure | Cases with a binary result | Employee wins | Employer wins | Employee win rate |
 |---|---:|---:|---:|---:|
-| Legal merits | 2741 | 1762 | 979 | 64.3% |
+| Legal merits | 2724 | 1746 | 978 | 64.1% |
 | Monetary outcome | 3046 | 1865 | 1181 | 61.2% |
 
 **Legal merits** asks whether the Authority upheld the employee's dismissal grievance or found the dismissal unjustified.
 
 **Monetary outcome** asks whether the employee obtained a positive observable net monetary order in the public determination. Zero observable employee recovery, or a net adverse order, is an employer-side monetary outcome. This is not a legal-merits classification.
 
-Legal merits currently has a binary result for **2741 of 3046 determinations in the monetary corpus (90.0% coverage)**. Direct-source automated resolutions are accepted only when two independent legal-text matchers agree and an evidence excerpt is retained. The remaining **305 determinations require manual direct legal-merits source review** and are listed in `legal_review_queue.csv`; their monetary outcome is not used as a substitute legal result.
+Legal merits currently has a binary result for **2724 of 3046 determinations in the monetary corpus (89.4% coverage)**. Direct-source automated resolutions are accepted only when two independent legal-text matchers agree and an evidence excerpt is retained. The remaining **322 determinations require manual direct legal-merits source review** and are listed in `legal_review_queue.csv`; their monetary outcome is not used as a substitute legal result.
 
-There are **2741 determinations with both measures**. Among those paired cases, the two measures disagree in **630 cases (23.0%)**.
+There are **2724 determinations with both measures**. Among those paired cases, the two measures disagree in **627 cases (23.0%)**.
 
 The source corpus is search-derived from the ERA determinations database. It should not be described as a proven census of every dismissal determination unless the recall audit establishes that.
 
