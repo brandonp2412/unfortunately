@@ -6,7 +6,7 @@ import argparse
 import csv
 from pathlib import Path
 
-from analyze_era import all_result_urls
+from era_search import all_search_result_refs
 
 DEFAULT_TERMS = (
     "unjustified dismissal",
@@ -30,31 +30,33 @@ def main() -> None:
         raise SystemExit("year-start must not exceed year-end")
 
     root = args.root.resolve()
-    cache_root = root / ".search-recall-cache"
+    cache_root = root / ".search-recall-cache-v2"
     summary: list[dict[str, str]] = []
     candidates: list[dict[str, str]] = []
 
     for year in range(args.year_start, args.year_end + 1):
         results: dict[str, set[str]] = {}
         for term in terms:
-            results[term] = set(all_result_urls(cache_root, year, term))
+            results[term] = set(all_search_result_refs(cache_root, year, term))
         primary = results["unjustified dismissal"]
+        if not primary:
+            raise RuntimeError(f"primary ERA query unexpectedly returned zero results for {year}")
         for term in terms:
-            urls = results[term]
-            additional = sorted(urls - primary)
-            missing = sorted(primary - urls)
+            refs = results[term]
+            additional = sorted(refs - primary)
+            missing = sorted(primary - refs)
             summary.append({
                 "year": str(year),
                 "query": term,
-                "search_hits": str(len(urls)),
+                "search_hits": str(len(refs)),
                 "additional_vs_primary": str(len(additional)),
                 "primary_not_returned_by_query": str(len(missing)),
             })
-            for url in additional:
+            for ref in additional:
                 candidates.append({
                     "year": str(year),
                     "query": term,
-                    "pdf_url": url,
+                    "determination_ref": ref,
                     "candidate_reason": "returned by alternate query but not primary query",
                 })
 
@@ -69,15 +71,15 @@ def main() -> None:
         writer.writeheader()
         writer.writerows(summary)
     with (out / "search_recall_candidates.csv").open("w", newline="") as handle:
-        fields = ["year", "query", "pdf_url", "candidate_reason"]
+        fields = ["year", "query", "determination_ref", "candidate_reason"]
         writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()
         writer.writerows(candidates)
 
-    extra = len({row["pdf_url"] for row in candidates})
+    extra = len({row["determination_ref"] for row in candidates})
     print(
         f"Recall audit complete for {args.year_start}-{args.year_end}: "
-        f"{extra} unique alternate-query candidate URLs require scope review."
+        f"{extra} unique alternate-query candidate determinations require scope review."
     )
 
 
