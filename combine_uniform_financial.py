@@ -7,17 +7,50 @@ import csv
 from collections import Counter, defaultdict
 from pathlib import Path
 
-EXPECTED_SUBSTANTIVE = 3046  # 2,373 (2010-2019) + 673 (2020-2025)
+YEARS = tuple(range(2010, 2026))
+BINARY_OUTCOMES = {"employee_win", "employer_win"}
 
 
 def load_rows(root: Path) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
-    for year in range(2010, 2026):
+    for year in YEARS:
         path = root / "output" / "uniform_financial" / f"{year}.csv"
         if not path.exists():
             raise SystemExit(f"missing {path}")
-        rows.extend(csv.DictReader(path.open(newline="")))
+        year_rows = list(csv.DictReader(path.open(newline="")))
+        if not year_rows:
+            raise SystemExit(f"no substantive rows in {path}")
+        wrong_year = [row.get("year", "") for row in year_rows if row.get("year") != str(year)]
+        if wrong_year:
+            raise SystemExit(f"row year mismatch in {path}")
+        rows.extend(year_rows)
     return rows
+
+
+def validate_rows(rows: list[dict[str, str]]) -> None:
+    if not rows:
+        raise SystemExit("uniform financial corpus is empty")
+
+    urls = [row.get("pdf_url", "").strip() for row in rows]
+    if any(not url for url in urls):
+        raise SystemExit("missing substantive PDF URL in uniform financial output")
+    if len(set(urls)) != len(urls):
+        raise SystemExit("duplicate substantive PDF URLs in uniform financial output")
+
+    citations = [row.get("era_citation", "").strip() for row in rows]
+    if any(not citation for citation in citations):
+        raise SystemExit("missing ERA citation in uniform financial output")
+    if len(set(citations)) != len(citations):
+        raise SystemExit("duplicate ERA citations in uniform financial output")
+
+    if any(row.get("financial_binary_outcome") not in BINARY_OUTCOMES for row in rows):
+        raise SystemExit("non-binary financial outcome found")
+
+    present_years = {int(row["year"]) for row in rows}
+    if present_years != set(YEARS):
+        missing = sorted(set(YEARS) - present_years)
+        extra = sorted(present_years - set(YEARS))
+        raise SystemExit(f"unexpected year coverage: missing={missing}, extra={extra}")
 
 
 def write_csv(path: Path, rows: list[dict[str, str]], fields: list[str] | None = None) -> None:
@@ -36,14 +69,7 @@ def main() -> None:
     args = parser.parse_args()
     root = args.root.resolve()
     rows = load_rows(root)
-
-    if len(rows) != EXPECTED_SUBSTANTIVE:
-        raise SystemExit(f"expected {EXPECTED_SUBSTANTIVE} substantive rows, got {len(rows)}")
-    urls = [row["pdf_url"] for row in rows]
-    if len(set(urls)) != len(urls):
-        raise SystemExit("duplicate substantive PDF URLs in uniform financial output")
-    if any(row["financial_binary_outcome"] not in {"employee_win", "employer_win"} for row in rows):
-        raise SystemExit("non-binary financial outcome found")
+    validate_rows(rows)
 
     write_csv(root / "output" / "uniform_financial_2010_2025.csv", rows)
 
@@ -62,7 +88,7 @@ def main() -> None:
         by_year[row["year"]][row["financial_binary_outcome"]] += 1
     summary: list[dict[str, str]] = []
     total = Counter()
-    for year in range(2010, 2026):
+    for year in YEARS:
         counts = by_year[str(year)]
         n = counts["employee_win"] + counts["employer_win"]
         total.update(counts)
@@ -71,11 +97,11 @@ def main() -> None:
             "substantive_cases": str(n),
             "employee_wins": str(counts["employee_win"]),
             "employer_wins": str(counts["employer_win"]),
-            "employee_win_rate": f"{100 * counts['employee_win'] / n:.1f}" if n else "0.0",
+            "employee_win_rate": f"{100 * counts['employee_win'] / n:.1f}",
         })
     n = total["employee_win"] + total["employer_win"]
     summary.append({
-        "year": "2010-2025",
+        "year": f"{YEARS[0]}-{YEARS[-1]}",
         "substantive_cases": str(n),
         "employee_wins": str(total["employee_win"]),
         "employer_wins": str(total["employer_win"]),
