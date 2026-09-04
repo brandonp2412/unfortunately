@@ -91,5 +91,5 @@ jobs:
           fi
           git commit -m "Score all substantive cases with uniform financial metric"
           gh auth setup-git
-          git pull --rebase origin master
-          git push origin HEAD:master
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
