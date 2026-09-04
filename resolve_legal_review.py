@@ -52,8 +52,7 @@ def final_operative_section(text: str) -> str:
     headings = list(OPERATIVE_HEADING_RE.finditer(tail))
     if not headings:
         return ""
-    section = tail[headings[-1].start():]
-    return section if len(section) >= 40 else ""
+    return tail[headings[-1].start():]
 
 
 def strict_operative_match(text: str) -> tuple[str, str]:
