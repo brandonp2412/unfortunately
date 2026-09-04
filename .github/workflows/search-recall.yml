@@ -17,20 +17,80 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  recall:
+  recall-year:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        year: [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Audit search recall for ${{ matrix.year }}
+        run: |
+          python3 audit_search_recall.py \
+            --year-start "${{ matrix.year }}" \
+            --year-end "${{ matrix.year }}" \
+            --workers 1
+
+      - name: Upload year audit
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: recall-${{ matrix.year }}
+          path: output/recall/*.csv
+          if-no-files-found: error
+          retention-days: 7
+
+  combine:
+    needs: recall-year
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Audit primary search recall
-        run: python3 audit_search_recall.py --year-start 2010 --year-end 2025
+      - name: Download year audits
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: recall-*
+          path: recall-artifacts
 
-      - name: Show recall summary
-        run: cat output/recall/search_recall_summary.csv
+      - name: Combine year audits
+        run: |
+          python3 - <<'PY'
+          import csv
+          from pathlib import Path
+
+          root = Path("recall-artifacts")
+          out = Path("output/recall")
+          out.mkdir(parents=True, exist_ok=True)
+
+          def combine(name: str) -> None:
+              paths = sorted(root.glob(f"recall-*/{name}"), key=lambda p: int(p.parent.name.split("-")[-1]))
+              if len(paths) != 16:
+                  raise SystemExit(f"expected 16 {name} artifacts, got {len(paths)}")
+              rows = []
+              fields = None
+              for path in paths:
+                  with path.open(newline="") as handle:
+                      reader = csv.DictReader(handle)
+                      if fields is None:
+                          fields = list(reader.fieldnames or [])
+                      elif list(reader.fieldnames or []) != fields:
+                          raise SystemExit(f"schema mismatch in {path}")
+                      rows.extend(reader)
+              with (out / name).open("w", newline="") as handle:
+                  writer = csv.DictWriter(handle, fieldnames=fields or [])
+                  writer.writeheader()
+                  writer.writerows(rows)
+
+          combine("search_recall_summary.csv")
+          combine("search_recall_candidates.csv")
+          PY
+          cat output/recall/search_recall_summary.csv
 
       - name: Commit recall audit
         if: github.event_name == 'push'
