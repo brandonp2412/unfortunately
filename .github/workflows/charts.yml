@@ -1,11 +1,14 @@
-name: Regenerate charts
+name: Regenerate canonical outcome summaries and charts
 
 on:
   push:
     paths:
+      - build_outcome_summaries.py
+      - make_dual_outcome_charts.py
       - make_charts.py
+      - output/combined_2010_2019_strict_classification.csv
       - output/combined_2020_2025_binary_classification.csv
-      - validate_legacy_review.py
+      - output/uniform_financial_2010_2025.csv
       - .github/workflows/charts.yml
   workflow_dispatch:
 
@@ -13,8 +16,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: regenerate-charts
-  cancel-in-progress: true
+  group: writeback-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   charts:
@@ -31,22 +34,26 @@ jobs:
       - name: Run tests
         run: python3 -m pytest -q
 
-      - name: Regenerate charts
-        run: python3 make_charts.py
+      - name: Build canonical summaries
+        run: python3 build_outcome_summaries.py
 
-      - name: Commit regenerated PNGs
+      - name: Regenerate canonical outcome charts
+        run: python3 make_dual_outcome_charts.py
+
+      - name: Commit generated outputs
+        if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add output/charts/*.png
+          git add output/headline output/charts/legal_*.png output/charts/monetary_*.png output/charts/legal_vs_monetary_*.png
           if git diff --cached --quiet; then
-            echo "Charts already up to date"
+            echo "Canonical outputs already up to date"
             exit 0
           fi
-          git commit -m "Regenerate audited binary charts"
+          git commit -m "Regenerate canonical dual-outcome results [skip ci]"
           gh auth setup-git
-          git pull --rebase origin master
-          git push origin HEAD:master
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
