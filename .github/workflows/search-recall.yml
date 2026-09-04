@@ -1,0 +1,50 @@
+name: Audit ERA search recall
+
+on:
+  push:
+    paths:
+      - audit_search_recall.py
+      - analyze_era.py
+      - .github/workflows/search-recall.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: writeback-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  recall:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Audit primary search recall
+        run: python3 audit_search_recall.py --year-start 2010 --year-end 2025
+
+      - name: Show recall summary
+        run: cat output/recall/search_recall_summary.csv
+
+      - name: Commit recall audit
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add output/recall
+          if git diff --cached --quiet; then
+            echo "Recall audit already up to date"
+            exit 0
+          fi
+          git commit -m "Record ERA search recall audit [skip ci]"
+          gh auth setup-git
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
