@@ -16,8 +16,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: writeback-${{ github.ref }}
-  cancel-in-progress: false
+  group: canonical-charts-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   charts:
