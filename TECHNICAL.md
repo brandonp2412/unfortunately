@@ -6,7 +6,7 @@ The project studies public Employment Relations Authority determinations returne
 
 That is a **search-derived corpus**, not an asserted census of every dismissal determination. Costs-only, procedural, compliance, withdrawal, duplicate, jurisdiction-only, and follow-up decisions remain visible in audit material but are excluded from merits analyses when they do not finally determine a dismissal or constructive-dismissal claim.
 
-`audit_search_recall.py` compares the primary query with alternative phrases including `unjustifiably dismissed`, `dismissal was not justified`, and `constructive dismissal`. Alternate-query-only URLs are candidates for direct scope review, not automatic additions.
+`audit_search_recall.py` compares the primary query with alternative phrases including `unjustifiably dismissed`, `dismissal was not justified`, and `constructive dismissal`. Alternate-query-only determinations are candidates for direct scope review, not automatic additions. The live ERA site currently routes search results through `/determination/view/...` pages; `era_search.py` resolves those pages to source PDFs and makes both current and legacy acquisition use the same search parser. A search-page parse failure raises instead of being recorded as zero results.
 
 ## Two outcome measures
 
@@ -20,6 +20,8 @@ Legal outcomes come from direct review of operative findings, conclusions, and o
 - `employer_win`: the Authority rejected the dismissal grievance or found the dismissal justified.
 
 Automated text cues are routing aids only. They do not override a source-reviewed legal classification.
+
+Not every monetary-corpus determination currently has a binary legal-merits classification. Canonical output reports legal classification coverage explicitly and writes every unresolved case to `output/headline/legal_review_queue.csv`. A monetary result is never used to fill that legal gap.
 
 ### Monetary outcome
 
@@ -40,7 +42,8 @@ A case can therefore be a **legal employee win but a monetary employer win**, or
 - `monetary_outcome_summary.csv` — monetary totals and rates by year.
 - `legal_vs_monetary_summary.csv` — paired-case rates, overlap, and disagreement.
 - `paired_case_outcomes.csv` — case-level legal/monetary comparison.
-- `manifest.json` — machine-readable definitions, source files, and totals.
+- `legal_review_queue.csv` — monetary-corpus determinations lacking a binary legal-merits result and requiring direct source review.
+- `manifest.json` — machine-readable definitions, source files, totals, and legal-classification coverage.
 - `README.md` — generated human-readable headline summary.
 
 The legal and monetary datasets may have different denominators. The paired comparison uses only determinations with both measures and reports unmatched cases explicitly.
@@ -49,14 +52,16 @@ The older root-level `output/binary_outcome_summary.csv` and mixed outcome chart
 
 ## Acquisition and parsing
 
-`analyze_era.py` accepts a requested `--year` and `--keywords`. Citation and decision-date parsing are year-parameterized. The outcome cue treats these materially different findings separately:
+`analyze_era.py` accepts a requested `--year` and `--keywords`. Citation and decision-date parsing are year-parameterized. `analyze_legacy_year.py` and `analyze_era.py` both use `era_search.py` for the current ERA result-detail-page format.
+
+The outcome cue treats these materially different findings separately:
 
 - `dismissal was not justified` → employee-side cue.
 - `dismissal was justified` → employer-side cue.
 - `dismissal was unjustified` → employee-side cue.
 - `dismissal was not unjustified` → employer-side cue.
 
-Regression tests cover these negation cases and multi-year citation/date parsing.
+Regression tests cover these negation cases, current ERA result links, and multi-year citation/date parsing.
 
 PDF text extraction uses `pdftotext`; short/empty results can fall back to OCR when the required binaries are available.
 
@@ -74,7 +79,7 @@ Salary normalization accepts explicit hour, week, fortnight, month, year, or ann
 
 See `output/README.md`. In short:
 
-- `output/headline/` — canonical public statistics.
+- `output/headline/` — canonical public statistics and legal-review coverage queue.
 - `output/charts/` — public visualizations; filenames prefixed `legal_` or `monetary_` are canonical outcome charts.
 - `output/recall/` — search-recall audit results.
 - `output/uniform_*`, `output/combined_*`, queues, and audit ledgers — intermediate or audit datasets.
