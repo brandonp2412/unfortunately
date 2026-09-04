@@ -13,8 +13,9 @@ import shutil
 import subprocess
 import time
 from pathlib import Path
-from urllib.parse import urlencode, urljoin
-from urllib.request import Request, urlopen
+from urllib.parse import urljoin
+
+from era_search import all_result_pdf_urls, fetch as era_fetch
 
 BASE = "https://determinations.era.govt.nz"
 SEARCH = BASE + "/determinations/DeterminationSearchForm"
@@ -53,36 +54,13 @@ def citation_from_text(text: str, year: int) -> str:
 
 
 def fetch(url: str) -> bytes:
-    request = Request(url, headers={"User-Agent": "ERA-research/1.0 (public-decision-analysis)"})
-    with urlopen(request, timeout=60) as response:
-        return response.read()
+    """Fetch an ERA resource using the shared search client's request policy."""
+    return era_fetch(url)
 
 
 def all_result_urls(root: Path, year: int = 2024, keywords: str = "unjustified dismissal") -> list[str]:
-    """Fetch all ERA search-result PDF URLs for one year and query string."""
-    urls: list[str] = []
-    cache_slug = re.sub(r"[^a-z0-9]+", "_", keywords.lower()).strip("_") or "query"
-    page_dir = root / "data" / "search" / cache_slug
-    page_dir.mkdir(parents=True, exist_ok=True)
-    for start in range(0, 5000, 10):
-        params = {
-            "Keywords": keywords,
-            "DateFrom": f"{year}-01-01",
-            "DateTo": f"{year}-12-31",
-            "action_doSearch": "Search",
-            "start": start,
-        }
-        page = page_dir / f"search_page_{start:04d}.html"
-        if not page.exists():
-            page.write_bytes(fetch(SEARCH + "?" + urlencode(params)))
-            time.sleep(0.15)
-        found = extract_pdf_urls_for_year(page.read_text(errors="replace"), year)
-        if not found:
-            break
-        for url in found:
-            if url not in urls:
-                urls.append(url)
-    return urls
+    """Search the current ERA database and resolve each result to its PDF URL."""
+    return all_result_pdf_urls(root, year, keywords)
 
 
 def pdf_text(pdf: Path, text_path: Path) -> str:
