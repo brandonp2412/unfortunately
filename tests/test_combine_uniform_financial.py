@@ -25,12 +25,39 @@ def write_year(root: Path, year: int, suffix: str | None = None, stored_citation
         })
 
 
+def write_legacy_2010(root: Path) -> None:
+    out = root / "output" / "uniform_financial"
+    out.mkdir(parents=True, exist_ok=True)
+    with (out / "2010.csv").open("w", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=["year", "era_citation", "pdf_url", "financial_binary_outcome"],
+        )
+        writer.writeheader()
+        writer.writerow({
+            "year": "2010",
+            "era_citation": "WA 999/10",
+            "pdf_url": "https://determinations.era.govt.nz/assets/elawpdf/2010/2ecbf5cd22/wa-206_10.pdf",
+            "financial_binary_outcome": "employee_win",
+        })
+
+
 def test_load_and_validate_accept_dynamic_corpus_size(tmp_path: Path) -> None:
     for year in YEARS:
         write_year(tmp_path, year)
     rows = load_rows(tmp_path)
     validate_rows(rows)
     assert len(rows) == len(YEARS)
+
+
+def test_load_and_validate_accept_source_verified_legacy_citation(tmp_path: Path) -> None:
+    for year in YEARS:
+        write_year(tmp_path, year)
+    write_legacy_2010(tmp_path)
+    rows = load_rows(tmp_path)
+    row = next(row for row in rows if row["year"] == "2010")
+    assert row["era_citation"] == "WA 206/10"
+    validate_rows(rows)
 
 
 def test_load_rows_repairs_stale_cross_year_citation_from_url(tmp_path: Path) -> None:
