@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import time
 from pathlib import Path
+from urllib.error import URLError
 from urllib.parse import urlencode, urljoin
 from urllib.request import Request, urlopen
 
@@ -12,12 +13,23 @@ BASE = "https://determinations.era.govt.nz"
 SEARCH = BASE + "/determinations/DeterminationSearchForm"
 RESULT_VIEW_RE = re.compile(r'href=["\']([^"\']*/determination/view/\d+)["\']', re.I)
 PDF_LINK_RE = re.compile(r'href=["\']([^"\']+\.pdf(?:\?[^"\']*)?)["\']', re.I)
+PAGE_START_RE = re.compile(r'(?:[?&]|&amp;)start=(\d+)', re.I)
+PAGE_SIZE = 10
+MAX_START = 5000
 
 
-def fetch(url: str) -> bytes:
+def fetch(url: str, attempts: int = 3) -> bytes:
+    """Fetch one public ERA page with a bounded timeout and small retry budget."""
     request = Request(url, headers={"User-Agent": "ERA-research/1.0 (public-decision-analysis)"})
-    with urlopen(request, timeout=60) as response:
-        return response.read()
+    for attempt in range(attempts):
+        try:
+            with urlopen(request, timeout=20) as response:
+                return response.read()
+        except (TimeoutError, URLError):
+            if attempt + 1 == attempts:
+                raise
+            time.sleep(1.0 + attempt)
+    raise AssertionError("unreachable")
 
 
 def extract_search_result_refs(html: str) -> list[str]:
@@ -34,16 +46,30 @@ def extract_search_result_refs(html: str) -> list[str]:
     return refs
 
 
+def extract_next_start(html: str, current_start: int) -> int | None:
+    """Return the smallest advertised pagination offset after the current page."""
+    candidates = sorted({int(value) for value in PAGE_START_RE.findall(html) if int(value) > current_start})
+    return candidates[0] if candidates else None
+
+
 def _cache_slug(keywords: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", keywords.lower()).strip("_") or "query"
 
 
 def all_search_result_refs(root: Path, year: int, keywords: str) -> list[str]:
-    """Return every first-seen determination reference for a year/query search."""
+    """Return every first-seen determination reference for a year/query search.
+
+    Pagination fails closed if a page repeats or stops yielding new result references.
+    This prevents a changed/ignored ERA pagination parameter from silently looping to
+    the hard limit and being mistaken for a complete search.
+    """
     refs: list[str] = []
     page_dir = root / "data" / "search" / _cache_slug(keywords) / str(year)
     page_dir.mkdir(parents=True, exist_ok=True)
-    for start in range(0, 5000, 10):
+    start = 0
+    seen_page_results: set[tuple[str, ...]] = set()
+
+    while start < MAX_START:
         params = {
             "Keywords": keywords,
             "DateFrom": f"{year}-01-01",
@@ -64,11 +90,38 @@ def all_search_result_refs(root: Path, year: int, keywords: str) -> list[str]:
                     "refusing to treat this as a zero-result audit"
                 )
             break
+
+        signature = tuple(found)
+        if signature in seen_page_results:
+            raise RuntimeError(
+                f"ERA pagination repeated a result page at start={start} for {year} / {keywords!r}; "
+                "refusing to treat a non-advancing search as complete"
+            )
+        seen_page_results.add(signature)
+
+        before = len(refs)
         for ref in found:
             if ref not in refs:
                 refs.append(ref)
-        if len(found) < 10:
+        if len(refs) == before:
+            raise RuntimeError(
+                f"ERA pagination yielded no new results at start={start} for {year} / {keywords!r}; "
+                "refusing to treat a non-advancing search as complete"
+            )
+
+        if len(found) < PAGE_SIZE:
             break
+        advertised_next = extract_next_start(html, start)
+        next_start = advertised_next if advertised_next is not None else start + PAGE_SIZE
+        if next_start <= start:
+            raise RuntimeError(
+                f"ERA pagination did not advance from start={start} for {year} / {keywords!r}"
+            )
+        start = next_start
+    else:
+        raise RuntimeError(
+            f"ERA search exceeded the {MAX_START}-result pagination safety bound for {year} / {keywords!r}"
+        )
     return refs
 
 
