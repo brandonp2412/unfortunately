@@ -3,7 +3,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from analyze_era import extract_pdf_urls, extract_pdf_urls_for_year, outcome_from_operative_text, category_from_text
+from analyze_era import (
+    category_from_text,
+    citation_from_text,
+    extract_pdf_urls,
+    extract_pdf_urls_for_year,
+    field_date,
+    initial_flags,
+    outcome_from_operative_text,
+)
 
 
 def test_extract_pdf_urls_deduplicates_and_normalizes_relative_links():
@@ -31,13 +39,55 @@ def test_extract_pdf_urls_for_year_accepts_legacy_underscore_filenames():
     ]
 
 
+def test_citation_parser_is_year_parameterized():
+    assert citation_from_text("Determination [2025] NZERA 41", 2025) == "[2025] NZERA 41"
+    assert citation_from_text("Determination [2024] NZERA 41", 2025) == ""
+
+
+def test_date_parser_is_year_parameterized():
+    assert field_date("Date of Determination: 7 March 2026", 2026) == "7 March 2026"
+    assert field_date("Date: 7 March 2024", 2026) == ""
+
+
 def test_outcome_does_not_treat_negative_finding_as_employee_win():
-    assert outcome_from_operative_text("I find the dismissal was not unjustifiably dismissed.") == "employer_win"
+    assert outcome_from_operative_text(
+        "I find the employee was not unjustifiably dismissed."
+    ) == "employer_win"
+
+
+def test_outcome_not_justified_is_employee_win():
+    assert outcome_from_operative_text(
+        "For these reasons I find the dismissal was not justified."
+    ) == "employee_win"
+
+
+def test_outcome_justified_is_employer_win():
+    assert outcome_from_operative_text(
+        "For these reasons I find the dismissal was justified."
+    ) == "employer_win"
+
+
+def test_outcome_unjustified_is_employee_win():
+    assert outcome_from_operative_text(
+        "The Authority determines that the dismissal was unjustified."
+    ) == "employee_win"
+
+
+def test_outcome_not_unjustified_is_employer_win():
+    assert outcome_from_operative_text(
+        "The Authority determines that the dismissal was not unjustified."
+    ) == "employer_win"
 
 
 def test_outcome_uses_later_operational_finding_not_earlier_submission():
     text = "The employer says dismissal was justified. Conclusion: Campbell was unjustifiably dismissed."
     assert outcome_from_operative_text(text) == "employee_win"
+
+
+def test_initial_flags_follow_negation_safe_outcome_routing():
+    assert initial_flags("Conclusion: the dismissal was not justified.")[
+        "automated_outcome_hint"
+    ] == "employee_win_candidate"
 
 
 def test_category_from_text_identifies_costs_follow_up():
