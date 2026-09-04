@@ -2,8 +2,9 @@
 """Resolve queued legal-merits outcomes only from explicit ERA source findings.
 
 This deliberately does not inspect monetary outcomes. A queued determination is
-promoted only when the existing operative-text classifier and a narrower,
-independent explicit-finding matcher agree on a binary legal result.
+promoted only when a narrow explicit-finding matcher and the broader legal-text
+classifier agree inside the final Outcome/Conclusion/Result/Determination/Orders
+section of the source determination.
 """
 from __future__ import annotations
 
@@ -14,9 +15,13 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from analyze_era import fetch, outcome_from_operative_text, pdf_text
+from era_identity import canonical_citation
 
 BINARY = {"employee_win", "employer_win"}
 DEFAULT_WORKERS = 6
+OPERATIVE_HEADING_RE = re.compile(
+    r"(?im)^[ \t]*(?:outcome|conclusion|result|determination|orders?)\b(?:[ \t]*:)?(?:[ \t]*\[\d+\])?"
+)
 
 STRICT_EMPLOYEE = re.compile(
     r"(?:dismissal|termination)\s+(?:was|is)\s+(?:unjustified|unjustifiable|not\s+justified)"
@@ -41,29 +46,38 @@ def normalize_excerpt(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+def final_operative_section(text: str) -> str:
+    """Return the last explicit operative section in the final 18k source characters."""
+    tail = text[-18000:]
+    headings = list(OPERATIVE_HEADING_RE.finditer(tail))
+    if not headings:
+        return ""
+    section = tail[headings[-1].start():]
+    return section if len(section) >= 40 else ""
+
+
 def strict_operative_match(text: str) -> tuple[str, str]:
-    """Return the last narrow legal-finding cue in the operative tail and evidence."""
-    tail_start = max(0, len(text) - 18000)
-    tail = text[tail_start:]
+    """Return the last narrow legal-finding cue and its evidence in supplied text."""
     matches: list[tuple[int, int, str]] = []
     for pattern, outcome in (
         (STRICT_EMPLOYEE, "employee_win"),
         (STRICT_EMPLOYER, "employer_win"),
     ):
-        for match in pattern.finditer(tail):
+        for match in pattern.finditer(text):
             matches.append((match.start(), match.end(), outcome))
     if not matches:
         return "review_required", ""
     start, end, outcome = max(matches, key=lambda item: item[0])
-    absolute_start = tail_start + start
-    absolute_end = tail_start + end
-    excerpt = text[max(0, absolute_start - 260):min(len(text), absolute_end + 360)]
+    excerpt = text[max(0, start - 260):min(len(text), end + 360)]
     return outcome, normalize_excerpt(excerpt)
 
 
 def resolve_text(text: str) -> tuple[str, str, str]:
-    routed = outcome_from_operative_text(text)
-    strict, evidence = strict_operative_match(text)
+    section = final_operative_section(text)
+    if not section:
+        return "review_required", "no_explicit_final_operative_section", ""
+    routed = outcome_from_operative_text(section)
+    strict, evidence = strict_operative_match(section)
     if routed in BINARY and strict == routed and evidence:
         return routed, "explicit_source_cue_agreement", evidence
     if routed in BINARY and strict in BINARY and routed != strict:
@@ -72,12 +86,12 @@ def resolve_text(text: str) -> tuple[str, str, str]:
         return "review_required", "broad_cue_without_strict_confirmation", evidence
     if strict in BINARY:
         return "review_required", "strict_cue_without_broad_confirmation", evidence
-    return "review_required", "no_explicit_binary_source_cue", ""
+    return "review_required", "no_explicit_binary_source_cue_in_final_section", ""
 
 
 def resolve_row(cache_root: Path, row: dict[str, str]) -> dict[str, str]:
-    citation = row.get("era_citation", "").strip() or re.sub(r"\W+", "_", row["pdf_url"])
-    slug = re.sub(r"[^A-Za-z0-9_.-]+", "_", citation).strip("_")
+    citation = canonical_citation(row.get("era_citation", ""), row["pdf_url"])
+    slug = re.sub(r"[^A-Za-z0-9_.-]+", "_", citation or row["pdf_url"]).strip("_")
     pdf = cache_root / "pdf" / f"{slug}.pdf"
     text_path = cache_root / "text" / f"{slug}.txt"
     pdf.parent.mkdir(parents=True, exist_ok=True)
@@ -88,22 +102,12 @@ def resolve_row(cache_root: Path, row: dict[str, str]) -> dict[str, str]:
     outcome, status, evidence = resolve_text(text)
     return {
         "year": row.get("year", ""),
-        "era_citation": row.get("era_citation", ""),
+        "era_citation": citation,
         "case_name": row.get("case_name", ""),
         "pdf_url": row["pdf_url"],
         "legal_outcome": outcome if outcome in BINARY else "",
         "source_resolution_status": status,
         "evidence_excerpt": evidence,
-    }
-
-
-def load_existing(path: Path) -> dict[str, dict[str, str]]:
-    if not path.exists():
-        return {}
-    return {
-        row["pdf_url"]: row
-        for row in csv.DictReader(path.open(newline=""))
-        if row.get("pdf_url")
     }
 
 
@@ -133,16 +137,15 @@ def main() -> None:
     if not queue_path.exists():
         raise SystemExit(f"missing {queue_path}; run build_outcome_summaries.py first")
     queue = list(csv.DictReader(queue_path.open(newline="")))
-    existing = load_existing(output_path)
     cache_root = root / ".legal-source-cache"
 
-    pending = [row for row in queue if row.get("pdf_url") not in existing]
-    if pending:
-        with ThreadPoolExecutor(max_workers=min(args.workers, len(pending))) as executor:
-            futures = {executor.submit(resolve_row, cache_root, row): row for row in pending}
+    results: dict[str, dict[str, str]] = {}
+    if queue:
+        with ThreadPoolExecutor(max_workers=min(args.workers, len(queue))) as executor:
+            futures = {executor.submit(resolve_row, cache_root, row): row for row in queue}
             for future in as_completed(futures):
                 result = future.result()
-                existing[result["pdf_url"]] = result
+                results[result["pdf_url"]] = result
                 print(
                     f"{result['year']} {result['era_citation']}: "
                     f"{result['legal_outcome'] or 'review_required'} "
@@ -150,7 +153,7 @@ def main() -> None:
                     flush=True,
                 )
 
-    rows = sorted(existing.values(), key=lambda row: (row.get("year", ""), row.get("era_citation", ""), row["pdf_url"]))
+    rows = sorted(results.values(), key=lambda row: (row.get("year", ""), row.get("era_citation", ""), row["pdf_url"]))
     write_results(output_path, rows)
     resolved = sum(row.get("legal_outcome") in BINARY for row in rows)
     ambiguous = sum(not row.get("legal_outcome") for row in rows)
