@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install dependencies
+        run: python3 -m pip install --disable-pip-version-check pillow pytest
+
+      - name: Compile Python
+        run: python3 -m compileall -q .
+
+      - name: Test
+        run: python3 -m pytest -q
+
+      - name: Validate canonical summary build
+        run: |
+          python3 build_outcome_summaries.py
+          python3 make_dual_outcome_charts.py
