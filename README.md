@@ -1,21 +1,24 @@
 # Unfortunately
 
-New Zealand Employment Relations Authority dismissal outcomes, 2010–2025.
+New Zealand Employment Relations Authority dismissal-outcome research, 2010–2025.
 
-**3,046 substantive decisions · 1,925 employee wins · 1,121 employer wins · 63.2% employee win rate**
+This project publishes **two separate outcome measures**. They are not combined into one win rate:
 
-![Outcomes by year](output/charts/outcomes_by_year.png)
+- **Legal merits:** whether the Authority upheld the employee's dismissal grievance or found the dismissal unjustified.
+- **Monetary outcome:** whether the employee obtained a positive observable net monetary order in the public determination.
 
-![Employee win rate by year](output/charts/employee_win_rate_by_year.png)
+Current counts, rates, overlap, and disagreement between those measures are generated from the audited data in [the canonical headline summary](output/headline/README.md).
 
-![Overall outcomes](output/charts/outcome_overall_pie.png)
+![Legal merits win rate](output/charts/legal_employee_win_rate_by_year.png)
 
-## 2020–2025 context
+![Monetary win rate](output/charts/monetary_employee_win_rate_by_year.png)
 
-![Serious-misconduct status by year](output/charts/serious_status_by_year.png)
+![Legal vs monetary win rate](output/charts/legal_vs_monetary_win_rate_by_year.png)
 
-![Industry](output/charts/industry_overall_pie.png)
+## Context
 
-![Occupation](output/charts/collar_overall_pie.png)
+The corpus is **search-derived** from public ERA determinations returned by the database. It should not be described as a proven census of every New Zealand dismissal determination unless the recall audit establishes that.
 
-[Method and data](TECHNICAL.md) · [ERA determinations](https://determinations.era.govt.nz/)
+The 2020–2025 data also includes contextual coding for serious misconduct, industry, occupation, and other source-stated fields.
+
+[Method and data](TECHNICAL.md) · [Output guide](output/README.md) · [ERA determinations](https://determinations.era.govt.nz/)
