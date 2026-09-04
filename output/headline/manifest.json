@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "period": "2010-2025",
+  "corpus": {
+    "description": "ERA determination search-derived dismissal corpus",
+    "primary_search_phrase": "unjustified dismissal",
+    "complete_population_claim": false
+  },
+  "measures": {
+    "legal_merits": {
+      "employee_win": "ERA upheld the dismissal grievance or found the dismissal unjustified",
+      "employer_win": "ERA rejected the dismissal grievance or found the dismissal justified",
+      "sources": [
+        "output/combined_2010_2019_strict_classification.csv",
+        "output/combined_2020_2025_binary_classification.csv:original_legal_outcome"
+      ]
+    },
+    "monetary_outcome": {
+      "employee_win": "positive observable net monetary order to the employee",
+      "employer_win": "zero observable employee recovery or net adverse monetary order",
+      "source": "output/uniform_financial_2010_2025.csv:financial_binary_outcome"
+    }
+  },
+  "totals": {
+    "legal": {
+      "year": "2010-2025",
+      "cases": "2724",
+      "employee_wins": "1746",
+      "employer_wins": "978",
+      "employee_win_rate": "64.1"
+    },
+    "monetary": {
+      "year": "2010-2025",
+      "cases": "3046",
+      "employee_wins": "1865",
+      "employer_wins": "1181",
+      "employee_win_rate": "61.2"
+    },
+    "paired": {
+      "year": "2010-2025",
+      "paired_cases": "2724",
+      "legal_employee_wins": "1746",
+      "legal_employee_win_rate": "64.1",
+      "monetary_employee_wins": "1689",
+      "monetary_employee_win_rate": "62.0",
+      "disagreements": "627",
+      "disagreement_rate": "23.0",
+      "legal_only": "0",
+      "monetary_only": "322"
+    }
+  }
+}
