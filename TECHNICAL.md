@@ -2,82 +2,104 @@
 
 ## Scope
 
-The corpus covers public Employment Relations Authority determinations returned by the ERA database search for `unjustified dismissal` from 2010–2025. The merits denominator contains determinations that finally resolve a dismissal or constructive-dismissal claim. Related costs, procedural, compliance, withdrawal, duplicate, and follow-up decisions remain in the audit corpus with their routing recorded.
+The project studies public Employment Relations Authority determinations returned by the ERA determinations database for the primary search phrase `unjustified dismissal`, currently covering 2010–2025.
 
-## Classification
+That is a **search-derived corpus**, not an asserted census of every dismissal determination. Costs-only, procedural, compliance, withdrawal, duplicate, jurisdiction-only, and follow-up decisions remain visible in audit material but are excluded from merits analyses when they do not finally determine a dismissal or constructive-dismissal claim.
 
-Each search result is downloaded, text is extracted with `pdftotext` plus OCR where required, and the operative findings, conclusion, and orders are read for final classification.
+`audit_search_recall.py` compares the primary query with alternative phrases including `unjustifiably dismissed`, `dismissal was not justified`, and `constructive dismissal`. Alternate-query-only URLs are candidates for direct scope review, not automatic additions.
 
-Final merits outcomes are binary:
+## Two outcome measures
 
-- `employee_win`: the Authority found an unjustified dismissal or upheld the dismissal grievance.
-- `employer_win`: the Authority found the dismissal justified or rejected the dismissal grievance.
+The repository deliberately publishes legal and monetary outcomes separately.
 
-Automated text cues provide review routing. Direct source review supplies final legal classifications.
+### Legal merits
 
-For review-routed 2020–2025 cases, the published binary dataset also records an observable-order tie-breaker from operative monetary orders:
+Legal outcomes come from direct review of operative findings, conclusions, and orders:
 
-1. total money ordered in the employee/applicant's favour;
-2. total money or costs ordered against the employee/applicant;
-3. subtract adverse money from employee-side recovery;
-4. positive net → `employee_win`;
-5. zero or negative net → `employer_win`.
+- `employee_win`: the Authority upheld the dismissal grievance or found the dismissal unjustified.
+- `employer_win`: the Authority rejected the dismissal grievance or found the dismissal justified.
 
-Targeted source audits cover parser-sensitive monetary orders and are stored in `output/financial_audit_resolutions.csv`. The 2020–2025 binary output contains 673 substantive decisions: 476 employee wins and 197 employer wins (70.7%).
+Automated text cues are routing aids only. They do not override a source-reviewed legal classification.
+
+### Monetary outcome
+
+The monetary measure asks a different question: what observable net monetary order flowed to the employee in the public determination?
+
+- `employee_win`: positive observable net money/remedy flow to the employee.
+- `employer_win`: zero observable employee recovery or a net adverse monetary order.
+
+Orders in both directions are netted when quantifiable and parser-sensitive cases are routed to direct source audit. Private legal fees or unstated settlements are not invented.
+
+A case can therefore be a **legal employee win but a monetary employer win**, or vice versa. This is expected and is measured explicitly.
+
+## Canonical headline outputs
+
+`build_outcome_summaries.py` creates `output/headline/`:
+
+- `legal_outcome_summary.csv` — legal-merits totals and rates by year.
+- `monetary_outcome_summary.csv` — monetary totals and rates by year.
+- `legal_vs_monetary_summary.csv` — paired-case rates, overlap, and disagreement.
+- `paired_case_outcomes.csv` — case-level legal/monetary comparison.
+- `manifest.json` — machine-readable definitions, source files, and totals.
+- `README.md` — generated human-readable headline summary.
+
+The legal and monetary datasets may have different denominators. The paired comparison uses only determinations with both measures and reports unmatched cases explicitly.
+
+The older root-level `output/binary_outcome_summary.csv` and mixed outcome chart filenames are retained only as historical/intermediate artifacts; they are not canonical headline statistics.
+
+## Acquisition and parsing
+
+`analyze_era.py` accepts a requested `--year` and `--keywords`. Citation and decision-date parsing are year-parameterized. The outcome cue treats these materially different findings separately:
+
+- `dismissal was not justified` → employee-side cue.
+- `dismissal was justified` → employer-side cue.
+- `dismissal was unjustified` → employee-side cue.
+- `dismissal was not unjustified` → employer-side cue.
+
+Regression tests cover these negation cases and multi-year citation/date parsing.
+
+PDF text extraction uses `pdftotext`; short/empty results can fall back to OCR when the required binaries are available.
 
 ## Serious misconduct
 
-Serious misconduct is coded as three separate facts: employer allegation, Authority finding that the conduct occurred, and Authority finding that the conduct amounted to serious misconduct. The strict serious-misconduct analysis uses the Authority finding.
-
-### 2024 strict results
-
-| Analysis | Included | Employee wins | Employer wins | Employee rate |
-|---|---:|---:|---:|---:|
-| Baseline | 63 | 46 | 17 | 73.0% |
-| ERA-confirmed serious misconduct removed | 61 | 46 | 15 | 75.4% |
-| Serious-misconduct allegations removed | 52 | 35 | 17 | 67.3% |
-| s 124 contribution removed | 61 | 44 | 17 | 72.1% |
-
-## Cross-year charts
-
-The headline 2010–2025 charts combine the completed 2010–2019 strict legal review with the audited 2020–2025 binary dataset. `make_charts.py` generates the outcome, trend, serious-misconduct, industry, and occupation charts.
+Serious misconduct is coded as separate facts: employer allegation, Authority finding that the conduct occurred, and Authority finding that the conduct amounted to serious misconduct. Allegation alone is never treated as an Authority finding.
 
 ## Context enrichment
 
 `enrich_context.py` records source-excerpt-backed context fields for stated employee ethnicity and gender, salary text and annualized salary range, occupation/collar signal, industry signal, and representation mentioned in the determination. Silent source fields use `not_stated`.
 
-Salary normalization accepts stated amounts with explicit hour, week, fortnight, month, year, or annum units. Hourly amounts annualize at 40 hours per week and 52 weeks per year; `$` is treated as NZD.
+Salary normalization accepts explicit hour, week, fortnight, month, year, or annum units. Hourly amounts annualize at 40 hours per week and 52 weeks per year; `$` is treated as NZD.
 
-## Main files
+## Output layout
 
-- `analyze_era.py` — acquire, extract, and route recent-year determinations.
-- `analyze_legacy_year.py` — acquire legacy-year source material.
-- `build_review_dossier.py` — collect operative material for case review.
-- `make_legacy_review_brief.py` — create compact review ledgers.
-- `validate_legacy_review.py` — validate completed reviewed-year exports.
-- `combine_years.py` / `combine_legacy_reviews.py` — combine year-level exports.
-- `full_classification.py` — build combined legal-classification exports.
-- `resolve_financial_outcomes.py` / `resolve_financial_outcomes_parallel.py` — resolve review-routed monetary outcomes.
-- `apply_financial_audit.py` — apply source-audited monetary resolutions and generate binary summaries.
-- `enrich_context.py` — add context categories and salary normalization.
-- `make_charts.py` — generate published PNG charts.
-- `output/combined_2010_2019_strict_classification.csv` — completed legacy strict classification.
-- `output/combined_2020_2025_binary_classification.csv` — audited recent binary classification.
-- `output/binary_outcome_summary.csv` — recent per-year totals and rates.
-- `output/financial_audit_resolutions.csv` — source-audited monetary resolutions.
-- `output/charts/` — published visualizations.
+See `output/README.md`. In short:
 
-## Reproduce or add a year
+- `output/headline/` — canonical public statistics.
+- `output/charts/` — public visualizations; filenames prefixed `legal_` or `monetary_` are canonical outcome charts.
+- `output/recall/` — search-recall audit results.
+- `output/uniform_*`, `output/combined_*`, queues, and audit ledgers — intermediate or audit datasets.
+
+## Reproduce
+
+```bash
+python3 build_outcome_summaries.py
+python3 make_dual_outcome_charts.py
+python3 -m pytest -q
+```
+
+To acquire a new year:
 
 ```bash
 python3 analyze_era.py --root years/2026 --year 2026
-python3 combine_years.py
-python3 enrich_context.py
-python3 make_charts.py
-pytest -q
 ```
 
-A completed year includes determination-by-determination merits review, source-supported binary outcomes, deduplication, regenerated charts, and passing tests.
+A year is not complete merely because automated routing produced an outcome. Completion requires determination-by-determination merits review, required monetary audits, deduplication, regenerated canonical outputs, and passing tests.
+
+To audit search recall:
+
+```bash
+python3 audit_search_recall.py --year-start 2010 --year-end 2025
+```
 
 ## Source
 
