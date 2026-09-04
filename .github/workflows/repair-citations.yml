@@ -1,0 +1,60 @@
+name: Repair recent ERA citation labels
+
+on:
+  push:
+    paths:
+      - repair_recent_citations.py
+      - era_identity.py
+      - .github/workflows/repair-citations.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: repair-citations-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Run regression tests
+        run: |
+          python3 -m pip install --disable-pip-version-check pillow pytest
+          python3 -m pytest -q
+
+      - name: Repair recent citation labels
+        run: python3 repair_recent_citations.py
+
+      - name: Rebuild canonical summaries
+        run: |
+          python3 build_outcome_summaries.py
+          python3 make_dual_outcome_charts.py
+
+      - name: Commit repaired source labels and canonical outputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add output/combined_2020_2025_full_classification.csv \
+                  output/combined_2020_2025_binary_classification.csv \
+                  output/headline \
+                  output/charts/legal_*.png \
+                  output/charts/monetary_*.png \
+                  output/charts/legal_vs_monetary_*.png
+          if git diff --cached --quiet; then
+            echo "Citation labels already canonical"
+            exit 0
+          fi
+          git commit -m "Repair ERA citation labels from source URLs [skip ci]"
+          gh auth setup-git
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
