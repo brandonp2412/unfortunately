@@ -6,8 +6,11 @@ on:
     paths:
       - uniform_financial.py
       - combine_uniform_financial.py
+      - era_identity.py
       - apply_financial_audit.py
       - tests/test_uniform_financial.py
+      - tests/test_combine_uniform_financial.py
+      - tests/test_era_identity.py
       - .github/workflows/uniform-financial.yml
 
 permissions:

@@ -5,7 +5,10 @@ from __future__ import annotations
 import re
 
 PATH_YEAR_RE = re.compile(r"/(20\d{2})/")
-MODERN_ERA_PDF_RE = re.compile(r"/(20\d{2})[-_]NZERA[-_](\d+)\.pdf(?:[?#]|$)", re.I)
+MODERN_ERA_PDF_RE = re.compile(
+    r"/(20\d{2})[-_]NZERA(?:[-_]([A-Za-z]+))?[-_](\d+)(?:[-_][A-Za-z0-9]+)*\.pdf(?:[?#]|$)",
+    re.I,
+)
 LEGACY_ERA_PDF_RE = re.compile(r"/([a-z]{2})-(\d+[a-z]?)[-_](\d{2})\.pdf(?:[?#]|$)", re.I)
 
 
@@ -33,12 +36,13 @@ def determination_year_from_pdf_url(url: str) -> int | None:
 
 
 def citation_from_pdf_url(url: str) -> str:
-    """Return the ERA citation encoded in a modern or legacy source PDF URL."""
+    """Return the ERA citation encoded in a modern/regional or legacy source PDF URL."""
     modern = MODERN_ERA_PDF_RE.search(url or "")
     if modern:
-        year, number = modern.groups()
+        year, venue, number = modern.groups()
         _validated_source_year(url, int(year))
-        return f"{year} NZERA {int(number)}"
+        venue_part = f" {venue.title()}" if venue else ""
+        return f"{year} NZERA{venue_part} {int(number)}"
 
     legacy = LEGACY_ERA_PDF_RE.search(url or "")
     if legacy:

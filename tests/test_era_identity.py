@@ -18,6 +18,17 @@ def test_citation_from_underscored_era_pdf_url() -> None:
     assert citation_from_pdf_url(url) == "2020 NZERA 100"
 
 
+def test_citation_from_regional_era_pdf_url() -> None:
+    url = "https://determinations.era.govt.nz/assets/elawpdf/2011/2c8e5e2987/2011_NZERA_Auckland_552.pdf"
+    assert citation_from_pdf_url(url) == "2011 NZERA Auckland 552"
+    assert determination_year_from_pdf_url(url) == 2011
+
+
+def test_citation_ignores_non_identity_filename_suffix() -> None:
+    url = "https://determinations.era.govt.nz/assets/elawpdf/2019/79d96d039f/2019_NZERA_141_Amended.pdf"
+    assert citation_from_pdf_url(url) == "2019 NZERA 141"
+
+
 def test_citation_from_legacy_era_pdf_url() -> None:
     url = "https://determinations.era.govt.nz/assets/elawpdf/2010/2ecbf5cd22/wa-206_10.pdf"
     assert citation_from_pdf_url(url) == "WA 206/10"
