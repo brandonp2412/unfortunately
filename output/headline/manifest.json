@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "period": "2010-2025",
   "corpus": {
     "description": "ERA determination search-derived dismissal corpus",
@@ -13,7 +13,14 @@
       "sources": [
         "output/combined_2010_2019_strict_classification.csv",
         "output/combined_2020_2025_binary_classification.csv:original_legal_outcome"
-      ]
+      ],
+      "binary_classification_coverage": {
+        "classified": 2724,
+        "reference_monetary_corpus": 3046,
+        "coverage_percent": 89.4,
+        "unresolved_direct_review": 322,
+        "review_queue": "output/headline/legal_review_queue.csv"
+      }
     },
     "monetary_outcome": {
       "employee_win": "positive observable net monetary order to the employee",
