@@ -46,6 +46,7 @@ def legal_rows(root: Path) -> list[dict[str, str]]:
             rows.append({
                 "year": row["year"],
                 "era_citation": row.get("era_citation", ""),
+                "case_name": row.get("case_name", ""),
                 "pdf_url": row["pdf_url"],
                 "outcome": outcome,
                 "source": str(legacy_path.relative_to(root)),
@@ -61,6 +62,7 @@ def legal_rows(root: Path) -> list[dict[str, str]]:
             rows.append({
                 "year": row["year"],
                 "era_citation": row.get("era_citation", ""),
+                "case_name": row.get("case_name", ""),
                 "pdf_url": row["pdf_url"],
                 "outcome": outcome,
                 "source": str(recent_path.relative_to(root)),
@@ -78,6 +80,7 @@ def monetary_rows(root: Path) -> list[dict[str, str]]:
         rows.append({
             "year": row["year"],
             "era_citation": row.get("era_citation", ""),
+            "case_name": row.get("case_name", ""),
             "pdf_url": row["pdf_url"],
             "outcome": outcome,
             "source": str(path.relative_to(root)),
@@ -123,12 +126,14 @@ def paired_rows(legal: list[dict[str, str]], monetary: list[dict[str, str]]) -> 
     for url in sorted(set(legal_by_url) | set(monetary_by_url)):
         legal_row = legal_by_url.get(url)
         monetary_row = monetary_by_url.get(url)
-        year = (legal_row or monetary_row or {})["year"]
+        source_row = legal_row or monetary_row
+        assert source_row is not None
         if legal_row and monetary_row and legal_row["year"] != monetary_row["year"]:
             raise ValueError(f"year mismatch for {url}")
         rows.append({
-            "year": year,
-            "era_citation": (legal_row or monetary_row or {}).get("era_citation", ""),
+            "year": source_row["year"],
+            "era_citation": source_row.get("era_citation", ""),
+            "case_name": source_row.get("case_name", ""),
             "pdf_url": url,
             "legal_outcome": legal_row["outcome"] if legal_row else "",
             "monetary_outcome": monetary_row["outcome"] if monetary_row else "",
@@ -162,15 +167,38 @@ def comparison_summary(rows: list[dict[str, str]]) -> list[dict[str, str]]:
     return result
 
 
-def headline_markdown(legal_summary: list[dict[str, str]], monetary_summary: list[dict[str, str]], comparison: list[dict[str, str]]) -> str:
+def unresolved_legal_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    return [
+        {
+            "year": row["year"],
+            "era_citation": row["era_citation"],
+            "case_name": row["case_name"],
+            "pdf_url": row["pdf_url"],
+            "monetary_outcome": row["monetary_outcome"],
+            "legal_review_status": "direct_source_review_required",
+        }
+        for row in rows
+        if row["monetary_outcome"] and not row["legal_outcome"]
+    ]
+
+
+def headline_markdown(
+    legal_summary: list[dict[str, str]],
+    monetary_summary: list[dict[str, str]],
+    comparison: list[dict[str, str]],
+    unresolved_count: int,
+) -> str:
     legal = legal_summary[-1]
     money = monetary_summary[-1]
     paired = comparison[-1]
+    legal_n = int(legal["cases"])
+    money_n = int(money["cases"])
+    coverage = 100 * legal_n / money_n if money_n else 0.0
     return f"""# Canonical outcome summary
 
 The repository publishes two different outcome measures. They are intentionally not merged into one \"win rate\".
 
-| Measure | Cases | Employee wins | Employer wins | Employee win rate |
+| Measure | Cases with a binary result | Employee wins | Employer wins | Employee win rate |
 |---|---:|---:|---:|---:|
 | Legal merits | {legal['cases']} | {legal['employee_wins']} | {legal['employer_wins']} | {legal['employee_win_rate']}% |
 | Monetary outcome | {money['cases']} | {money['employee_wins']} | {money['employer_wins']} | {money['employee_win_rate']}% |
@@ -179,7 +207,9 @@ The repository publishes two different outcome measures. They are intentionally 
 
 **Monetary outcome** asks whether the employee obtained a positive observable net monetary order in the public determination. Zero observable employee recovery, or a net adverse order, is an employer-side monetary outcome. This is not a legal-merits classification.
 
-There are **{paired['paired_cases']} determinations with both measures** in the current data. The two measures disagree in **{paired['disagreements']} cases ({paired['disagreement_rate']}%)**.
+Legal merits currently has a reviewed binary result for **{legal_n} of {money_n} determinations in the monetary corpus ({coverage:.1f}% coverage)**. The remaining **{unresolved_count} determinations require direct legal-merits source review** and are listed in `legal_review_queue.csv`; their monetary outcome is not used as a substitute legal result.
+
+There are **{paired['paired_cases']} determinations with both measures**. Among those paired cases, the two measures disagree in **{paired['disagreements']} cases ({paired['disagreement_rate']}%)**.
 
 The source corpus is search-derived from the ERA determinations database. It should not be described as a proven census of every dismissal determination unless the recall audit establishes that.
 
@@ -192,6 +222,7 @@ def build(root: Path) -> dict[str, object]:
     legal = legal_rows(root)
     monetary = monetary_rows(root)
     paired = paired_rows(legal, monetary)
+    unresolved = unresolved_legal_rows(paired)
     legal_summary = summarize(legal)
     monetary_summary = summarize(monetary)
     comparison = comparison_summary(paired)
@@ -205,12 +236,19 @@ def build(root: Path) -> dict[str, object]:
         "disagreement_rate", "legal_only", "monetary_only",
     ])
     write_csv(out / "paired_case_outcomes.csv", paired, [
-        "year", "era_citation", "pdf_url", "legal_outcome", "monetary_outcome", "paired", "disagrees",
+        "year", "era_citation", "case_name", "pdf_url", "legal_outcome",
+        "monetary_outcome", "paired", "disagrees",
+    ])
+    write_csv(out / "legal_review_queue.csv", unresolved, [
+        "year", "era_citation", "case_name", "pdf_url", "monetary_outcome", "legal_review_status",
     ])
 
+    legal_total = int(legal_summary[-1]["cases"])
+    money_total = int(monetary_summary[-1]["cases"])
+    coverage = 100 * legal_total / money_total if money_total else 0.0
     totals = {"legal": legal_summary[-1], "monetary": monetary_summary[-1], "paired": comparison[-1]}
     manifest = {
-        "schema_version": 1,
+        "schema_version": 2,
         "period": "2010-2025",
         "corpus": {
             "description": "ERA determination search-derived dismissal corpus",
@@ -225,6 +263,13 @@ def build(root: Path) -> dict[str, object]:
                     "output/combined_2010_2019_strict_classification.csv",
                     "output/combined_2020_2025_binary_classification.csv:original_legal_outcome",
                 ],
+                "binary_classification_coverage": {
+                    "classified": legal_total,
+                    "reference_monetary_corpus": money_total,
+                    "coverage_percent": round(coverage, 1),
+                    "unresolved_direct_review": len(unresolved),
+                    "review_queue": "output/headline/legal_review_queue.csv",
+                },
             },
             "monetary_outcome": {
                 "employee_win": "positive observable net monetary order to the employee",
@@ -236,7 +281,9 @@ def build(root: Path) -> dict[str, object]:
     }
     out.mkdir(parents=True, exist_ok=True)
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
-    (out / "README.md").write_text(headline_markdown(legal_summary, monetary_summary, comparison))
+    (out / "README.md").write_text(
+        headline_markdown(legal_summary, monetary_summary, comparison, len(unresolved))
+    )
     return manifest
 
 
