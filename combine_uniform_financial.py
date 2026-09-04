@@ -7,6 +7,8 @@ import csv
 from collections import Counter, defaultdict
 from pathlib import Path
 
+from era_identity import canonical_citation
+
 YEARS = tuple(range(2010, 2026))
 BINARY_OUTCOMES = {"employee_win", "employer_win"}
 
@@ -23,6 +25,8 @@ def load_rows(root: Path) -> list[dict[str, str]]:
         wrong_year = [row.get("year", "") for row in year_rows if row.get("year") != str(year)]
         if wrong_year:
             raise SystemExit(f"row year mismatch in {path}")
+        for row in year_rows:
+            row["era_citation"] = canonical_citation(row.get("era_citation", ""), row.get("pdf_url", ""))
         rows.extend(year_rows)
     return rows
 
@@ -42,6 +46,12 @@ def validate_rows(rows: list[dict[str, str]]) -> None:
         raise SystemExit("missing ERA citation in uniform financial output")
     if len(set(citations)) != len(citations):
         raise SystemExit("duplicate ERA citations in uniform financial output")
+    for row in rows:
+        if not row["era_citation"].startswith(f"{row['year']} NZERA "):
+            raise SystemExit(
+                f"ERA citation year mismatch after canonicalization: {row['year']} / "
+                f"{row['era_citation']} / {row['pdf_url']}"
+            )
 
     if any(row.get("financial_binary_outcome") not in BINARY_OUTCOMES for row in rows):
         raise SystemExit("non-binary financial outcome found")
