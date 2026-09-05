@@ -9,11 +9,11 @@ This project publishes **two separate outcome measures**. They are not combined 
 
 Current counts, rates, overlap, and disagreement between those measures are generated from the audited data in [the canonical headline summary](output/headline/README.md).
 
-![Legal merits win rate](output/charts/legal_employee_win_rate_by_year.png)
+![Legal merits win rate](output/charts/legal_employee_win_rate_by_year.png?v=dark-20260906)
 
-![Monetary win rate](output/charts/monetary_employee_win_rate_by_year.png)
+![Monetary win rate](output/charts/monetary_employee_win_rate_by_year.png?v=dark-20260906)
 
-![Legal vs monetary win rate](output/charts/legal_vs_monetary_win_rate_by_year.png)
+![Legal vs monetary win rate](output/charts/legal_vs_monetary_win_rate_by_year.png?v=dark-20260906)
 
 ## Context
 
