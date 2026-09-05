@@ -69,7 +69,7 @@ def build_site(output_dir: Path) -> None:
     monetary = _read_csv(HEADLINE / "monetary_outcome_summary.csv")
     comparison = _read_csv(HEADLINE / "legal_vs_monetary_summary.csv")
     cases = _read_csv(HEADLINE / "paired_case_outcomes.csv")
-    review_queue = _read_csv(HEADLINE / "legal_review_queue.csv")
+    unfinished_cases = _read_csv(HEADLINE / "unfinished_legal_cases.csv")
 
     legal_by_year = {row["year"]: row for row in legal if isinstance(row["year"], int)}
     monetary_by_year = {row["year"]: row for row in monetary if isinstance(row["year"], int)}
@@ -100,12 +100,12 @@ def build_site(output_dir: Path) -> None:
                 "year_start": min(years),
                 "year_end": max(years),
                 "case_count": len(cases),
-                "review_queue_count": len(review_queue),
+                "unfinished_case_count": len(unfinished_cases),
             },
         },
     )
     _write_json(output_dir / "data" / "cases.json", cases)
-    _write_json(output_dir / "data" / "review-queue.json", review_queue)
+    _write_json(output_dir / "data" / "unfinished-legal-cases.json", unfinished_cases)
 
     downloads = output_dir / "downloads"
     downloads.mkdir(parents=True, exist_ok=True)
@@ -114,7 +114,7 @@ def build_site(output_dir: Path) -> None:
         "monetary_outcome_summary.csv",
         "legal_vs_monetary_summary.csv",
         "paired_case_outcomes.csv",
-        "legal_review_queue.csv",
+        "unfinished_legal_cases.csv",
         "manifest.json",
     ):
         shutil.copy2(HEADLINE / name, downloads / name)

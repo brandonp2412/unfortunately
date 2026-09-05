@@ -1,24 +1,24 @@
-name: Resolve queued legal outcomes from ERA sources
+name: Audit unfinished legal cases for source cues
 
 on:
   push:
     paths:
-      - resolve_legal_review.py
+      - audit_legal_source_cues.py
       - analyze_era.py
       - build_outcome_summaries.py
       - output/combined_2020_2025_binary_classification.csv
-      - .github/workflows/legal-source-review.yml
+      - .github/workflows/legal-source-cue-audit.yml
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: legal-source-review-${{ github.ref }}
+  group: legal-source-cue-audit-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  source-review:
+  source-cue-audit:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -36,30 +36,25 @@ jobs:
       - name: Run tests
         run: python3 -m pytest -q
 
-      - name: Build current legal review queue
+      - name: Build current unfinished legal work list
         run: python3 build_outcome_summaries.py
 
-      - name: Resolve explicit operative findings from source PDFs
-        run: python3 resolve_legal_review.py --workers 6
+      - name: Audit explicit operative source cues
+        run: python3 audit_legal_source_cues.py --workers 6
 
-      - name: Rebuild canonical summaries with source resolutions
-        run: |
-          python3 build_outcome_summaries.py
-          python3 make_dual_outcome_charts.py
-
-      - name: Commit source-review evidence and regenerated outputs
+      - name: Commit cue-audit evidence
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add output/headline output/charts/legal_*.png output/charts/monetary_*.png output/charts/legal_vs_monetary_*.png
+          git add output/legal_source_cue_audit.csv
           if git diff --cached --quiet; then
-            echo "Source-review outputs already up to date"
+            echo "Source-cue audit already up to date"
             exit 0
           fi
-          git commit -m "Resolve explicit legal outcomes from ERA sources [skip ci]"
+          git commit -m "Refresh legal source-cue audit [skip ci]"
           gh auth setup-git
           git pull --rebase origin "${GITHUB_REF_NAME}"
           git push origin "HEAD:${GITHUB_REF_NAME}"

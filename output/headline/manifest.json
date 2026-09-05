@@ -1,6 +1,10 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "period": "2010-2025",
+  "status": {
+    "state": "unfinished",
+    "remaining_agent_legal_reviews": 322
+  },
   "corpus": {
     "description": "ERA determination search-derived dismissal corpus",
     "primary_search_phrase": "unjustified dismissal",
@@ -12,16 +16,14 @@
       "employer_win": "ERA rejected the dismissal grievance or found the dismissal justified",
       "sources": [
         "output/combined_2010_2019_strict_classification.csv",
-        "output/combined_2020_2025_binary_classification.csv:original_legal_outcome",
-        "output/headline/legal_source_resolutions.csv:explicit_source_cue_agreement"
+        "output/combined_2020_2025_binary_classification.csv:original_legal_outcome"
       ],
-      "source_resolved_additions": 0,
       "binary_classification_coverage": {
         "classified": 2724,
         "reference_monetary_corpus": 3046,
         "coverage_percent": 89.4,
-        "unresolved_manual_direct_review": 322,
-        "review_queue": "output/headline/legal_review_queue.csv"
+        "unfinished_agent_source_review": 322,
+        "unfinished_cases": "output/headline/unfinished_legal_cases.csv"
       }
     },
     "monetary_outcome": {

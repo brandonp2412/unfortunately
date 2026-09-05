@@ -19,9 +19,11 @@ Legal outcomes come from direct review of operative findings, conclusions, and o
 - `employee_win`: the Authority upheld the dismissal grievance or found the dismissal unjustified.
 - `employer_win`: the Authority rejected the dismissal grievance or found the dismissal justified.
 
-Automated text cues are routing aids only. They do not override a source-reviewed legal classification.
+Automated text cues and `audit_legal_source_cues.py` are routing aids only. They never create or override a canonical legal classification; final legal coding requires direct agent reading of the determination.
 
-Not every monetary-corpus determination currently has a binary legal-merits classification. Canonical output reports legal classification coverage explicitly and writes every unresolved case to `output/headline/legal_review_queue.csv`. A monetary result is never used to fill that legal gap.
+Not every monetary-corpus determination currently has a binary legal-merits classification. Canonical output reports legal classification coverage explicitly and writes every unfinished case to `output/headline/unfinished_legal_cases.csv`. A non-empty unfinished list means the project is **unfinished** and the legal headline is provisional. A monetary result is never used to fill that legal gap.
+
+Older and intermediate audit tables may still contain the literal pipeline state `review_required`. In those artifacts it means **unfinished agent review work**, not a request for the reader or repository user to perform the review. Canonical/public outputs use the explicit unfinished-work terminology.
 
 ### Monetary outcome
 
@@ -42,7 +44,7 @@ A case can therefore be a **legal employee win but a monetary employer win**, or
 - `monetary_outcome_summary.csv` — monetary totals and rates by year.
 - `legal_vs_monetary_summary.csv` — paired-case rates, overlap, and disagreement.
 - `paired_case_outcomes.csv` — case-level legal/monetary comparison.
-- `legal_review_queue.csv` — monetary-corpus determinations lacking a binary legal-merits result and requiring direct source review.
+- `unfinished_legal_cases.csv` — monetary-corpus determinations whose direct agent legal-merits source review is still unfinished.
 - `manifest.json` — machine-readable definitions, source files, totals, and legal-classification coverage.
 - `README.md` — generated human-readable headline summary.
 
@@ -98,7 +100,7 @@ To acquire a new year:
 python3 analyze_era.py --root years/2026 --year 2026
 ```
 
-A year is not complete merely because automated routing produced an outcome. Completion requires determination-by-determination merits review, required monetary audits, deduplication, regenerated canonical outputs, and passing tests.
+A year is not complete merely because automated routing produced an outcome. Completion requires determination-by-determination direct agent merits review, required monetary audits, deduplication, regenerated canonical outputs, an empty unfinished-work list for the claimed scope, and passing tests.
 
 To audit search recall:
 

@@ -17,9 +17,10 @@ This repository is an empirical legal-outcomes project. Legal merits and monetar
 9. Give a second source review to serious-misconduct, summary-dismissal, gross-misconduct, contribution, s 124, low-confidence, parser-audit, legal/monetary-disagreement, and unresolved-routing cases.
 10. Run `build_outcome_summaries.py`, `make_dual_outcome_charts.py`, and the full test suite.
 11. For context categories, run `enrich_context.py`, verify each source excerpt, and use `not_stated` for silent decisions.
+12. If any required direct source reviews remain, the repository and website must be marked **unfinished** with the remaining count. Never present an automated cue audit as completed review, and never use “review required” as though review were being deferred to the user.
 
-Automated outcome hints are routing aids. Final legal classifications come from direct reading of the determination. Monetary classifications come from observable final orders plus direct audit where the parser cannot safely resolve them.
+Automated outcome hints and source-cue audits are routing aids. Final legal classifications come from direct agent reading of the determination. Monetary classifications come from observable final orders plus direct audit where the parser cannot safely resolve them.
 
 Year-specific reviewed overrides remain local to their source year. Do not add a new hard-coded calendar year to generic citation, date, or URL parsing.
 
-The final handoff includes the raw-results CSV, substantive-claims CSV, review queue, legal outcomes, monetary outcomes, disagreement/audit queue, recall results, regenerated headline outputs/charts, and exact commands used.
+The final handoff includes the raw-results CSV, substantive-claims CSV, unfinished-work ledger (which must be empty before claiming completion), legal outcomes, monetary outcomes, disagreement/audit queue, recall results, regenerated headline outputs/charts, and exact commands used.

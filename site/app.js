@@ -8,7 +8,7 @@
 
   const pct = (value) => value == null ? "—" : `${Number(value).toFixed(1)}%`;
   const number = (value) => Number(value || 0).toLocaleString("en-NZ");
-  const outcomeLabel = (value) => value === "employee_win" ? "Employee win" : value === "employer_win" ? "Employer win" : "Review required";
+  const outcomeLabel = (value) => value === "employee_win" ? "Employee win" : value === "employer_win" ? "Employer win" : "Unfinished";
   const outcomeClass = (value, kind) => value === "employee_win" ? `${kind}-win` : value === "employer_win" ? "employer-win" : "unresolved";
 
   function setHeadlineStats() {
@@ -22,7 +22,12 @@
     $("#disagreement-rate").textContent = pct(totals.paired.disagreement_rate);
     $("#paired-meta").textContent = `${number(totals.paired.disagreements)} of ${number(totals.paired.paired_cases)} paired cases`;
     $("#coverage-rate").textContent = pct(coverage.coverage_percent);
-    $("#coverage-meta").textContent = `${number(coverage.classified)} classified · ${number(coverage.unresolved_manual_direct_review)} review required`;
+    const remaining = Number(coverage.unfinished_agent_source_review || 0);
+    $("#coverage-meta").textContent = `${number(coverage.classified)} classified · ${number(remaining)} unfinished`;
+    $("#work-status").textContent = remaining
+      ? `Research status: unfinished — ${number(remaining)} legal-merits determinations still need direct agent source review.`
+      : "Research status: complete — no legal-merits source reviews remain.";
+    $("#work-status").classList.toggle("complete", !remaining);
     $("#legal-definition").textContent = `${manifest.measures.legal_merits.employee_win}.`;
     $("#money-definition").textContent = `${manifest.measures.monetary_outcome.employee_win}.`;
     $("#corpus-definition").textContent = `${manifest.corpus.description}. The source is search-derived and is not presented as a proven complete population.`;
@@ -173,8 +178,8 @@
       const haystack = `${item.case_name || ""} ${item.era_citation || ""}`.toLowerCase();
       if (query && !haystack.includes(query)) return false;
       if (year && String(item.year) !== year) return false;
-      if (legal === "unresolved" && item.legal_outcome != null) return false;
-      if (legal && legal !== "unresolved" && item.legal_outcome !== legal) return false;
+      if (legal === "unfinished" && item.legal_outcome != null) return false;
+      if (legal && legal !== "unfinished" && item.legal_outcome !== legal) return false;
       if (money && item.monetary_outcome !== money) return false;
       if (disagreement && item.disagrees !== "yes") return false;
       return true;

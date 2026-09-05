@@ -10,17 +10,17 @@ Use `headline/` for statistics quoted outside the repository:
 - `headline/monetary_outcome_summary.csv`
 - `headline/legal_vs_monetary_summary.csv`
 - `headline/paired_case_outcomes.csv`
-- `headline/legal_review_queue.csv` — monetary-corpus determinations still requiring a direct legal-merits classification.
+- `headline/unfinished_legal_cases.csv` — determinations for which direct agent legal-merits source review is still unfinished.
 - `headline/manifest.json`
 - `headline/README.md`
 
 Use the `legal_*`, `monetary_*`, and `legal_vs_monetary_*` PNGs in `charts/` for outcome visualizations.
 
-The legal headline is calculated only from cases with a direct binary legal-merits classification. `legal_review_queue.csv` is intentionally excluded until those determinations are reviewed; their monetary outcome is never used to fill the legal field.
+The legal headline is calculated only from cases with a direct binary legal-merits classification. If `unfinished_legal_cases.csv` is non-empty, the project is **unfinished** and the legal headline is provisional. Those rows are excluded until the reviewing agent completes direct source review; their monetary outcome is never used to fill the legal field. Automated source-cue audits are routing aids only and are non-canonical.
 
 ## Audit and intermediate data
 
-The `combined_*`, `uniform_*`, `financial_*`, per-year outputs, review queues, and scope ledgers exist to make the pipeline auditable and reproducible. Their filenames describe pipeline stages, not endorsement as headline statistics.
+The `combined_*`, `uniform_*`, `financial_*`, per-year outputs, unfinished-work lists, cue audits, and scope ledgers exist to make the pipeline auditable and reproducible. Their filenames describe pipeline stages, not endorsement as headline statistics.
 
 `binary_outcome_summary.csv` and the older unprefixed outcome chart names are historical/intermediate outputs from the previous mixed-measure presentation. Do not cite them as the canonical project result.
 

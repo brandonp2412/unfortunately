@@ -11,7 +11,7 @@ The repository publishes two different outcome measures. They are intentionally 
 
 **Monetary outcome** asks whether the employee obtained a positive observable net monetary order in the public determination. Zero observable employee recovery, or a net adverse order, is an employer-side monetary outcome. This is not a legal-merits classification.
 
-Legal merits currently has a binary result for **2724 of 3046 determinations in the monetary corpus (89.4% coverage)**. Direct-source automated resolutions are accepted only when two independent legal-text matchers agree and an evidence excerpt is retained. The remaining **322 determinations require manual direct legal-merits source review** and are listed in `legal_review_queue.csv`; their monetary outcome is not used as a substitute legal result.
+**Research status: UNFINISHED.** Legal merits currently has a binary result for **2724 of 3046 determinations in the monetary corpus (89.4% coverage)**. The remaining **322 determinations are unfinished agent work** and are listed in `unfinished_legal_cases.csv`. They still require direct source review by the reviewing agent; their monetary outcome is not used as a substitute legal result. Automated text cues are routing aids only and cannot complete this work.
 
 There are **2724 determinations with both measures**. Among those paired cases, the two measures disagree in **627 cases (23.0%)**.
 

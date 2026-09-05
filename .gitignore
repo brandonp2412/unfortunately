@@ -21,6 +21,7 @@ Thumbs.db
 /dist/
 
 # Reproducible ERA source cache (large PDFs, extracted text, and search HTML)
+.legal-source-cache/
 years/*/data/pdfs/
 years/*/data/text/
 years/*/data/search_page_*.html
