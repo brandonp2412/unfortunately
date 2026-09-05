@@ -202,6 +202,27 @@ def place_line_label(
     )
 
 
+def box_anchor_for_point(
+    point: tuple[float, float],
+    box: tuple[float, float, float, float],
+) -> tuple[float, float]:
+    """Return the nearest point on a label box for a short leader line."""
+    x, y = point
+    left, top, right, bottom = box
+    anchor_x = min(max(x, left), right)
+    anchor_y = min(max(y, top), bottom)
+
+    if left < x < right and top < y < bottom:
+        distances = {
+            (left, y): x - left,
+            (right, y): right - x,
+            (x, top): y - top,
+            (x, bottom): bottom - y,
+        }
+        return min(distances, key=distances.get)
+    return anchor_x, anchor_y
+
+
 def draw_title(draw: ImageDraw.ImageDraw, title: str, image_width: int) -> None:
     """Center a title and shrink it only as much as needed to preserve edge padding."""
     title_font = TITLE_FONT
@@ -460,6 +481,7 @@ def line_chart(title: str, labels: list[str], series: dict[str, list[float]], pa
         if len(points) > 1:
             draw.line(points, fill=colors[idx % len(colors)], width=6, joint="curve")
         for x, y in points:
+            draw.ellipse((x - 10, y - 10, x + 10, y + 10), fill=SURFACE)
             draw.ellipse((x - 8, y - 8, x + 8, y + 8), fill=colors[idx % len(colors)])
 
     occupied_labels: list[tuple[float, float, float, float]] = []
@@ -479,6 +501,19 @@ def line_chart(title: str, labels: list[str], series: dict[str, list[float]], pa
                 prefer_above=idx % 2 == 0,
             )
             occupied_labels.append(label_box)
+            anchor = box_anchor_for_point(point, label_box)
+            draw.line((point, anchor), fill=color, width=2)
+            draw.ellipse(
+                (point[0] - 3, point[1] - 3, point[0] + 3, point[1] + 3),
+                fill=color,
+            )
+            draw.rounded_rectangle(
+                label_box,
+                radius=7,
+                fill=SURFACE_RAISED,
+                outline=color,
+                width=2,
+            )
             text_x = label_box[0] + 5
             text_y = label_box[1] + 3
             draw.text(
@@ -486,8 +521,6 @@ def line_chart(title: str, labels: list[str], series: dict[str, list[float]], pa
                 value_text,
                 fill=color,
                 font=SMALL_FONT,
-                stroke_width=4,
-                stroke_fill=SURFACE,
             )
 
     for i, label in enumerate(labels):
