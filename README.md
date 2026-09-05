@@ -2,6 +2,8 @@
 
 New Zealand Employment Relations Authority dismissal-outcome research, 2010–2025.
 
+**[Explore the interactive website →](https://brandonp2412.github.io/unfortunately/)**
+
 This project publishes **two separate outcome measures**. They are not combined into one win rate:
 
 - **Legal merits:** whether the Authority upheld the employee's dismissal grievance or found the dismissal unjustified.
