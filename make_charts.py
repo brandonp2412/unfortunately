@@ -103,124 +103,34 @@ def text_size(
     return box[2] - box[0], box[3] - box[1]
 
 
-def boxes_overlap(
-    first: tuple[float, float, float, float],
-    second: tuple[float, float, float, float],
-    *,
-    gap: float = 0,
-) -> bool:
-    return not (
-        first[2] + gap <= second[0]
-        or second[2] + gap <= first[0]
-        or first[3] + gap <= second[1]
-        or second[3] + gap <= first[1]
-    )
-
-
-def segment_box(
-    start: tuple[float, float],
-    end: tuple[float, float],
-    *,
-    padding: float = 8,
-) -> tuple[float, float, float, float]:
-    """Return a padded segment envelope used to keep annotations off trend lines."""
-    return (
-        min(start[0], end[0]) - padding,
-        min(start[1], end[1]) - padding,
-        max(start[0], end[0]) + padding,
-        max(start[1], end[1]) + padding,
-    )
-
-
-def place_line_label(
+def draw_line_value(
     draw: ImageDraw.ImageDraw,
     text: str,
     point: tuple[float, float],
+    color: str,
     plot_bounds: tuple[float, float, float, float],
-    occupied: list[tuple[float, float, float, float]],
-    line_boxes: list[tuple[float, float, float, float]],
     *,
-    prefer_above: bool,
-) -> tuple[float, float, float, float]:
-    """Choose a readable annotation position away from lines and other labels."""
+    above: bool,
+) -> None:
+    """Draw a compact value label close to its point with a consistent series side."""
     x, y = point
     text_w, text_h = text_size(draw, text, SMALL_FONT)
-    pad_x, pad_y = 5, 3
     left, top, right, bottom = plot_bounds
-    directions = (-1, 1) if prefer_above else (1, -1)
-    candidates: list[tuple[float, float]] = []
-    for direction in directions:
-        for gap in (18, 40, 62):
-            candidate_y = y - text_h - gap if direction < 0 else y + gap
-            candidates.extend([
-                (x - text_w / 2, candidate_y),
-                (x + 14, candidate_y),
-                (x - text_w - 14, candidate_y),
-            ])
+    gap = 16
 
-    def clamp(candidate: tuple[float, float]) -> tuple[float, float, float, float]:
-        candidate_x, candidate_y = candidate
-        candidate_x = min(max(candidate_x, left + 4), right - text_w - 4)
-        candidate_y = min(max(candidate_y, top + 4), bottom - text_h - 4)
-        return (
-            candidate_x - pad_x,
-            candidate_y - pad_y,
-            candidate_x + text_w + pad_x,
-            candidate_y + text_h + pad_y,
-        )
+    text_x = x - text_w / 2
+    text_y = y - text_h - gap if above else y + gap
+    text_x = min(max(text_x, left + 3), right - text_w - 3)
+    text_y = min(max(text_y, top + 3), bottom - text_h - 3)
 
-    boxes: list[tuple[float, float, float, float]] = []
-    for candidate in candidates:
-        box = clamp(candidate)
-        if box not in boxes:
-            boxes.append(box)
-
-    for box in boxes:
-        if any(boxes_overlap(box, used, gap=4) for used in occupied):
-            continue
-        if any(boxes_overlap(box, line_box) for line_box in line_boxes):
-            continue
-        return box
-
-    def overlap_area(
-        first: tuple[float, float, float, float],
-        second: tuple[float, float, float, float],
-    ) -> float:
-        width = max(0.0, min(first[2], second[2]) - max(first[0], second[0]))
-        height = max(0.0, min(first[3], second[3]) - max(first[1], second[1]))
-        return width * height
-
-    # If the plot is too dense for a completely clear position, never sacrifice
-    # label-to-label readability: line overlap is cheaper because the text halo
-    # masks the line underneath it.
-    return min(
-        boxes,
-        key=lambda box: (
-            sum(overlap_area(box, used) for used in occupied) * 1000
-            + sum(overlap_area(box, line_box) for line_box in line_boxes)
-        ),
+    draw.text(
+        (text_x, text_y),
+        text,
+        fill=color,
+        font=SMALL_FONT,
+        stroke_width=4,
+        stroke_fill=SURFACE,
     )
-
-
-def box_anchor_for_point(
-    point: tuple[float, float],
-    box: tuple[float, float, float, float],
-) -> tuple[float, float]:
-    """Return the nearest point on a label box for a short leader line."""
-    x, y = point
-    left, top, right, bottom = box
-    anchor_x = min(max(x, left), right)
-    anchor_y = min(max(y, top), bottom)
-
-    if left < x < right and top < y < bottom:
-        distances = {
-            (left, y): x - left,
-            (right, y): right - x,
-            (x, top): y - top,
-            (x, bottom): bottom - y,
-        }
-        return min(distances, key=distances.get)
-    return anchor_x, anchor_y
 
 
 def draw_title(draw: ImageDraw.ImageDraw, title: str, image_width: int) -> None:
@@ -465,7 +375,6 @@ def line_chart(title: str, labels: list[str], series: dict[str, list[float]], pa
 
     colors = [COLORS["employee_win"], "#49B4D0"]
     rendered_series: list[tuple[int, str, list[float], list[tuple[float, float]]]] = []
-    all_line_boxes: list[tuple[float, float, float, float]] = []
 
     for idx, (name, values) in enumerate(series.items()):
         points = [
@@ -476,51 +385,37 @@ def line_chart(title: str, labels: list[str], series: dict[str, list[float]], pa
             for i, value in enumerate(values)
         ]
         rendered_series.append((idx, name, values, points))
-        for start, end in zip(points, points[1:]):
-            all_line_boxes.append(segment_box(start, end))
         if len(points) > 1:
             draw.line(points, fill=colors[idx % len(colors)], width=6, joint="curve")
         for x, y in points:
-            draw.ellipse((x - 10, y - 10, x + 10, y + 10), fill=SURFACE)
-            draw.ellipse((x - 8, y - 8, x + 8, y + 8), fill=colors[idx % len(colors)])
+            draw.ellipse((x - 9, y - 9, x + 9, y + 9), fill=SURFACE)
+            draw.ellipse((x - 7, y - 7, x + 7, y + 7), fill=colors[idx % len(colors)])
 
-    occupied_labels: list[tuple[float, float, float, float]] = []
+    # Keep labels close and predictable: first series above, second below.
+    # A comparison chart needs fewer annotations than a single-series chart;
+    # every point remains visible, but numbers are sampled to preserve whitespace.
+    last_index = len(labels) - 1
+    multiple_series = len(rendered_series) > 1
     for idx, _name, values, points in rendered_series:
         color = colors[idx % len(colors)]
-        for i, (value, point) in enumerate(zip(values, points)):
-            if not (i % 2 == idx % 2 or i == len(labels) - 1):
-                continue
-            value_text = f"{value:.1f}%"
-            label_box = place_line_label(
+        if multiple_series:
+            min_index = min(range(len(values)), key=values.__getitem__)
+            max_index = max(range(len(values)), key=values.__getitem__)
+            label_indices = {min_index, max_index, last_index}
+        else:
+            label_indices = set(range(0, len(labels), 2))
+            label_indices.add(last_index)
+            if last_index > 0 and (last_index - 1) in label_indices:
+                label_indices.remove(last_index - 1)
+
+        for i in sorted(label_indices):
+            draw_line_value(
                 draw,
-                value_text,
-                point,
+                f"{values[i]:.1f}%",
+                points[i],
+                color,
                 plot_bounds,
-                occupied_labels,
-                all_line_boxes,
-                prefer_above=idx % 2 == 0,
-            )
-            occupied_labels.append(label_box)
-            anchor = box_anchor_for_point(point, label_box)
-            draw.line((point, anchor), fill=color, width=2)
-            draw.ellipse(
-                (point[0] - 3, point[1] - 3, point[0] + 3, point[1] + 3),
-                fill=color,
-            )
-            draw.rounded_rectangle(
-                label_box,
-                radius=7,
-                fill=SURFACE_RAISED,
-                outline=color,
-                width=2,
-            )
-            text_x = label_box[0] + 5
-            text_y = label_box[1] + 3
-            draw.text(
-                (text_x, text_y),
-                value_text,
-                fill=color,
-                font=SMALL_FONT,
+                above=idx % 2 == 0,
             )
 
     for i, label in enumerate(labels):
