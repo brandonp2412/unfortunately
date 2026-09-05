@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Interactive Employment Relations Authority dismissal-outcome research for New Zealand, 2010–2025.">
+  <meta name="theme-color" content="#0a0d12">
+  <title>Unfortunately — NZ dismissal outcomes</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="./" aria-label="Unfortunately home">
+      <span class="brand-mark" aria-hidden="true">U</span>
+      <span>Unfortunately</span>
+    </a>
+    <nav aria-label="Primary">
+      <a href="#trends">Trends</a>
+      <a href="#cases">Cases</a>
+      <a href="#method">Method</a>
+      <a class="nav-github" href="https://github.com/brandonp2412/unfortunately">GitHub ↗</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <div class="eyebrow">New Zealand · Employment Relations Authority · 2010–2025</div>
+      <h1>Dismissal outcomes,<br><span>without collapsing the story.</span></h1>
+      <p class="hero-copy">
+        Explore the audited ERA dismissal corpus across two deliberately separate measures:
+        whether the employee won on <strong>legal merits</strong>, and whether the final public
+        orders produced a positive <strong>monetary outcome</strong>.
+      </p>
+      <div class="hero-actions">
+        <a class="button primary" href="#trends">Explore the data</a>
+        <a class="button ghost" href="./downloads/paired_case_outcomes.csv">Download case data</a>
+      </div>
+    </section>
+
+    <section class="stats" aria-label="Headline statistics">
+      <article class="stat-card legal-card">
+        <div class="stat-topline"><span class="dot legal-dot"></span>Legal merits</div>
+        <div class="stat-value" id="legal-rate">—</div>
+        <div class="stat-label">employee win rate</div>
+        <div class="stat-meta" id="legal-meta">Loading…</div>
+      </article>
+      <article class="stat-card money-card">
+        <div class="stat-topline"><span class="dot money-dot"></span>Monetary outcome</div>
+        <div class="stat-value" id="money-rate">—</div>
+        <div class="stat-label">employee win rate</div>
+        <div class="stat-meta" id="money-meta">Loading…</div>
+      </article>
+      <article class="stat-card">
+        <div class="stat-topline"><span class="dot disagreement-dot"></span>Paired cases</div>
+        <div class="stat-value" id="disagreement-rate">—</div>
+        <div class="stat-label">legal / monetary disagreement</div>
+        <div class="stat-meta" id="paired-meta">Loading…</div>
+      </article>
+      <article class="stat-card">
+        <div class="stat-topline"><span class="dot coverage-dot"></span>Legal coverage</div>
+        <div class="stat-value" id="coverage-rate">—</div>
+        <div class="stat-label">of monetary corpus classified</div>
+        <div class="stat-meta" id="coverage-meta">Loading…</div>
+      </article>
+    </section>
+
+    <section class="section" id="trends">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">Year by year</div>
+          <h2>Two measures. One timeline.</h2>
+          <p>Select a year or tap any chart point to inspect the underlying rates and disagreement.</p>
+        </div>
+        <div class="chart-legend" aria-label="Chart legend">
+          <span><i class="legend-line legal-line"></i>Legal merits</span>
+          <span><i class="legend-line money-line"></i>Monetary outcome</span>
+        </div>
+      </div>
+
+      <div class="chart-shell">
+        <div class="chart-toolbar">
+          <label for="year-select">Inspect year</label>
+          <select id="year-select" aria-label="Inspect year"></select>
+        </div>
+        <div class="chart-wrap">
+          <svg id="rate-chart" viewBox="0 0 960 430" role="img" aria-labelledby="chart-title chart-desc">
+            <title id="chart-title">Employee win rate by year</title>
+            <desc id="chart-desc">Legal merits and monetary employee win rates from 2010 through 2025.</desc>
+          </svg>
+        </div>
+        <div class="year-detail" id="year-detail" aria-live="polite">
+          <div class="year-detail-main">
+            <div class="detail-year" id="detail-year">—</div>
+            <div class="detail-title">Selected year</div>
+          </div>
+          <div class="detail-metric">
+            <span>Legal merits</span><strong id="detail-legal">—</strong><small id="detail-legal-cases">—</small>
+          </div>
+          <div class="detail-metric">
+            <span>Monetary</span><strong id="detail-money">—</strong><small id="detail-money-cases">—</small>
+          </div>
+          <div class="detail-metric">
+            <span>Disagreement</span><strong id="detail-disagreement">—</strong><small id="detail-paired">—</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="mini-section">
+        <div class="mini-heading">
+          <div>
+            <h3>Where the two measures diverge</h3>
+            <p>Share of paired cases where legal merits and monetary outcome point to different sides.</p>
+          </div>
+          <span class="mini-note">0–100%</span>
+        </div>
+        <div class="disagreement-bars" id="disagreement-bars"></div>
+      </div>
+    </section>
+
+    <section class="section cases-section" id="cases">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">Case explorer</div>
+          <h2>Open the determinations.</h2>
+          <p>Search all cases in the canonical monetary corpus. Legal merits marked “review required” are intentionally unresolved, not inferred from money.</p>
+        </div>
+        <div class="result-total"><strong id="case-total">—</strong><span>matching cases</span></div>
+      </div>
+
+      <form class="filters" id="filters">
+        <label class="search-field">
+          <span>Search cases</span>
+          <input id="search" type="search" placeholder="Case name or citation…" autocomplete="off">
+        </label>
+        <label>
+          <span>Year</span>
+          <select id="year-filter"><option value="">All years</option></select>
+        </label>
+        <label>
+          <span>Legal merits</span>
+          <select id="legal-filter">
+            <option value="">All outcomes</option>
+            <option value="employee_win">Employee win</option>
+            <option value="employer_win">Employer win</option>
+            <option value="unresolved">Review required</option>
+          </select>
+        </label>
+        <label>
+          <span>Monetary outcome</span>
+          <select id="money-filter">
+            <option value="">All outcomes</option>
+            <option value="employee_win">Employee win</option>
+            <option value="employer_win">Employer win</option>
+          </select>
+        </label>
+        <label>
+          <span>Sort</span>
+          <select id="sort-filter">
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="name">Case name A–Z</option>
+          </select>
+        </label>
+        <label class="check-filter">
+          <input id="disagreement-filter" type="checkbox">
+          <span>Only legal / monetary disagreements</span>
+        </label>
+        <button class="button ghost reset-button" id="reset-filters" type="button">Reset filters</button>
+      </form>
+
+      <div class="case-list" id="case-list" aria-live="polite"></div>
+      <div class="pagination">
+        <button class="button ghost" id="prev-page" type="button">← Previous</button>
+        <span id="page-status">—</span>
+        <button class="button ghost" id="next-page" type="button">Next →</button>
+      </div>
+    </section>
+
+    <section class="section method-section" id="method">
+      <div class="section-heading method-heading">
+        <div>
+          <div class="eyebrow">Method</div>
+          <h2>The distinction is the point.</h2>
+        </div>
+        <p class="method-lede">
+          A legal win and a monetary win answer different questions. Unfortunately keeps them
+          separate at every level: headline metrics, yearly trends, case rows, and downloadable data.
+        </p>
+      </div>
+
+      <div class="method-grid">
+        <article>
+          <span class="method-number">01</span>
+          <h3>Legal merits</h3>
+          <p id="legal-definition">Whether the Authority upheld the dismissal grievance or found the dismissal unjustified.</p>
+        </article>
+        <article>
+          <span class="method-number">02</span>
+          <h3>Monetary outcome</h3>
+          <p id="money-definition">Whether the employee obtained a positive observable net monetary order in the public determination.</p>
+        </article>
+        <article>
+          <span class="method-number">03</span>
+          <h3>Corpus scope</h3>
+          <p id="corpus-definition">The corpus is search-derived from public ERA determinations and is not described as a proven census unless recall auditing establishes that.</p>
+        </article>
+      </div>
+
+      <div class="downloads">
+        <div>
+          <h3>Reproduce or inspect the data</h3>
+          <p>Canonical exports used to build this site are published alongside the source code.</p>
+        </div>
+        <div class="download-links">
+          <a href="./downloads/legal_outcome_summary.csv">Legal summary ↓</a>
+          <a href="./downloads/monetary_outcome_summary.csv">Monetary summary ↓</a>
+          <a href="./downloads/legal_vs_monetary_summary.csv">Paired summary ↓</a>
+          <a href="./downloads/paired_case_outcomes.csv">All cases ↓</a>
+          <a href="./downloads/legal_review_queue.csv">Review queue ↓</a>
+          <a href="./downloads/manifest.json">Manifest ↓</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Unfortunately · empirical legal-outcomes research</span>
+    <span>Source data: <a href="https://determinations.era.govt.nz/">ERA determinations ↗</a></span>
+  </footer>
+
+  <noscript>
+    <div class="noscript">This site requires JavaScript for charts and case filtering. CSV downloads remain available above.</div>
+  </noscript>
+</body>
+</html>
