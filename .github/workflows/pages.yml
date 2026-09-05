@@ -9,6 +9,13 @@ on:
       - site/**
       - output/headline/**
       - .github/workflows/pages.yml
+  workflow_run:
+    workflows:
+      - Regenerate canonical outcome summaries and charts
+    branches:
+      - main
+    types:
+      - completed
   workflow_dispatch:
 
 permissions:
@@ -22,6 +29,7 @@ concurrency:
 
 jobs:
   build:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
