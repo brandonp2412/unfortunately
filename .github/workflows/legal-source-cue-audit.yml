@@ -50,6 +50,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add output/legal_source_cue_audit.csv
+          # build_outcome_summaries.py refreshes headline files only to provide the
+          # current work list to this audit. Canonical output commits belong to the
+          # charts workflow, so discard those local refreshes before rebasing.
+          git restore output/headline
           if git diff --cached --quiet; then
             echo "Source-cue audit already up to date"
             exit 0
