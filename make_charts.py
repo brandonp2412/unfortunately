@@ -94,6 +94,114 @@ def inset_text_x(
     return min(max(desired_x, padding), image_width - padding - width)
 
 
+def text_size(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    text_font: ImageFont.ImageFont,
+) -> tuple[float, float]:
+    box = draw.textbbox((0, 0), text, font=text_font)
+    return box[2] - box[0], box[3] - box[1]
+
+
+def boxes_overlap(
+    first: tuple[float, float, float, float],
+    second: tuple[float, float, float, float],
+    *,
+    gap: float = 0,
+) -> bool:
+    return not (
+        first[2] + gap <= second[0]
+        or second[2] + gap <= first[0]
+        or first[3] + gap <= second[1]
+        or second[3] + gap <= first[1]
+    )
+
+
+def segment_box(
+    start: tuple[float, float],
+    end: tuple[float, float],
+    *,
+    padding: float = 8,
+) -> tuple[float, float, float, float]:
+    """Return a padded segment envelope used to keep annotations off trend lines."""
+    return (
+        min(start[0], end[0]) - padding,
+        min(start[1], end[1]) - padding,
+        max(start[0], end[0]) + padding,
+        max(start[1], end[1]) + padding,
+    )
+
+
+def place_line_label(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    point: tuple[float, float],
+    plot_bounds: tuple[float, float, float, float],
+    occupied: list[tuple[float, float, float, float]],
+    line_boxes: list[tuple[float, float, float, float]],
+    *,
+    prefer_above: bool,
+) -> tuple[float, float, float, float]:
+    """Choose a readable annotation position away from lines and other labels."""
+    x, y = point
+    text_w, text_h = text_size(draw, text, SMALL_FONT)
+    pad_x, pad_y = 5, 3
+    left, top, right, bottom = plot_bounds
+    directions = (-1, 1) if prefer_above else (1, -1)
+    candidates: list[tuple[float, float]] = []
+    for direction in directions:
+        for gap in (18, 40, 62):
+            candidate_y = y - text_h - gap if direction < 0 else y + gap
+            candidates.extend([
+                (x - text_w / 2, candidate_y),
+                (x + 14, candidate_y),
+                (x - text_w - 14, candidate_y),
+            ])
+
+    def clamp(candidate: tuple[float, float]) -> tuple[float, float, float, float]:
+        candidate_x, candidate_y = candidate
+        candidate_x = min(max(candidate_x, left + 4), right - text_w - 4)
+        candidate_y = min(max(candidate_y, top + 4), bottom - text_h - 4)
+        return (
+            candidate_x - pad_x,
+            candidate_y - pad_y,
+            candidate_x + text_w + pad_x,
+            candidate_y + text_h + pad_y,
+        )
+
+    boxes: list[tuple[float, float, float, float]] = []
+    for candidate in candidates:
+        box = clamp(candidate)
+        if box not in boxes:
+            boxes.append(box)
+
+    for box in boxes:
+        if any(boxes_overlap(box, used, gap=4) for used in occupied):
+            continue
+        if any(boxes_overlap(box, line_box) for line_box in line_boxes):
+            continue
+        return box
+
+    def overlap_area(
+        first: tuple[float, float, float, float],
+        second: tuple[float, float, float, float],
+    ) -> float:
+        width = max(0.0, min(first[2], second[2]) - max(first[0], second[0]))
+        height = max(0.0, min(first[3], second[3]) - max(first[1], second[1]))
+        return width * height
+
+    # If the plot is too dense for a completely clear position, never sacrifice
+    # label-to-label readability: line overlap is cheaper because the text halo
+    # masks the line underneath it.
+    return min(
+        boxes,
+        key=lambda box: (
+            sum(overlap_area(box, used) for used in occupied) * 1000
+            + sum(overlap_area(box, line_box) for line_box in line_boxes)
+        ),
+    )
+
+
 def draw_title(draw: ImageDraw.ImageDraw, title: str, image_width: int) -> None:
     """Center a title and shrink it only as much as needed to preserve edge padding."""
     title_font = TITLE_FONT
@@ -314,6 +422,7 @@ def line_chart(title: str, labels: list[str], series: dict[str, list[float]], pa
     draw = ImageDraw.Draw(image)
     draw_title(draw, title, width)
     chart_w, chart_h = width - left - right, height - bottom - top
+    plot_bounds = (left, top, width - right, height - bottom)
     draw.rounded_rectangle(
         (left - 14, top - 12, width - right + 14, height - bottom + 12),
         radius=18,
@@ -334,38 +443,52 @@ def line_chart(title: str, labels: list[str], series: dict[str, list[float]], pa
         )
 
     colors = [COLORS["employee_win"], "#49B4D0"]
+    rendered_series: list[tuple[int, str, list[float], list[tuple[float, float]]]] = []
+    all_line_boxes: list[tuple[float, float, float, float]] = []
+
     for idx, (name, values) in enumerate(series.items()):
-        points = []
-        for i, value in enumerate(values):
-            x = left + i * chart_w / (len(labels) - 1)
-            y = height - bottom - value / 100 * chart_h
-            points.append((x, y))
-            draw.ellipse((x - 8, y - 8, x + 8, y + 8), fill=colors[idx % len(colors)])
-            if i % 2 == idx % 2 or i == len(labels) - 1:
-                value_text = f"{value:.1f}%"
-                y_offset = -35 if idx == 0 else 13
-                value_width = text_width(draw, value_text, SMALL_FONT)
-                if i == 0:
-                    desired_x = x + 14
-                elif i == len(labels) - 1:
-                    desired_x = x - value_width - 14
-                else:
-                    desired_x = x - value_width / 2
-                value_x = inset_text_x(
-                    draw,
-                    value_text,
-                    SMALL_FONT,
-                    desired_x,
-                    width,
-                )
-                draw.text(
-                    (value_x, y + y_offset),
-                    value_text,
-                    fill=colors[idx % len(colors)],
-                    font=SMALL_FONT,
-                )
+        points = [
+            (
+                left + i * chart_w / (len(labels) - 1),
+                height - bottom - value / 100 * chart_h,
+            )
+            for i, value in enumerate(values)
+        ]
+        rendered_series.append((idx, name, values, points))
+        for start, end in zip(points, points[1:]):
+            all_line_boxes.append(segment_box(start, end))
         if len(points) > 1:
-            draw.line(points, fill=colors[idx % len(colors)], width=6)
+            draw.line(points, fill=colors[idx % len(colors)], width=6, joint="curve")
+        for x, y in points:
+            draw.ellipse((x - 8, y - 8, x + 8, y + 8), fill=colors[idx % len(colors)])
+
+    occupied_labels: list[tuple[float, float, float, float]] = []
+    for idx, _name, values, points in rendered_series:
+        color = colors[idx % len(colors)]
+        for i, (value, point) in enumerate(zip(values, points)):
+            if not (i % 2 == idx % 2 or i == len(labels) - 1):
+                continue
+            value_text = f"{value:.1f}%"
+            label_box = place_line_label(
+                draw,
+                value_text,
+                point,
+                plot_bounds,
+                occupied_labels,
+                all_line_boxes,
+                prefer_above=idx % 2 == 0,
+            )
+            occupied_labels.append(label_box)
+            text_x = label_box[0] + 5
+            text_y = label_box[1] + 3
+            draw.text(
+                (text_x, text_y),
+                value_text,
+                fill=color,
+                font=SMALL_FONT,
+                stroke_width=4,
+                stroke_fill=SURFACE,
+            )
 
     for i, label in enumerate(labels):
         x = left + i * chart_w / (len(labels) - 1)
