@@ -17,6 +17,9 @@ ENV/
 .DS_Store
 Thumbs.db
 
+# Generated GitHub Pages build
+/dist/
+
 # Reproducible ERA source cache (large PDFs, extracted text, and search HTML)
 years/*/data/pdfs/
 years/*/data/text/
