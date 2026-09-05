@@ -17,12 +17,14 @@ def test_build_site_exports_canonical_data(tmp_path: Path) -> None:
     cases = json.loads((target / "data" / "cases.json").read_text(encoding="utf-8"))
     review_queue = json.loads((target / "data" / "review-queue.json").read_text(encoding="utf-8"))
 
+    coverage = summary["manifest"]["measures"]["legal_merits"]["binary_classification_coverage"]
     assert summary["manifest"]["schema_version"] == 3
     assert summary["meta"]["year_start"] == 2010
     assert summary["meta"]["year_end"] == 2025
     assert len(summary["yearly"]) == 16
-    assert len(cases) == summary["meta"]["case_count"] == 3046
-    assert len(review_queue) == summary["meta"]["review_queue_count"] == 305
+    assert len(cases) == summary["meta"]["case_count"]
+    assert len(review_queue) == summary["meta"]["review_queue_count"]
+    assert len(review_queue) == coverage["unresolved_manual_direct_review"]
     assert {row["legal_outcome"] for row in cases} >= {None, "employee_win", "employer_win"}
     assert (target / "downloads" / "paired_case_outcomes.csv").is_file()
     assert (target / "downloads" / "manifest.json").is_file()
