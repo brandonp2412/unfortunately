@@ -59,6 +59,7 @@ AXIS_FONT = font(22)
 SMALL_FONT = font(21)
 VALUE_FONT = font(24, bold=True)
 LEGEND_FONT = font(23)
+EDGE_PADDING = 56
 
 
 def pretty(label: str) -> str:
@@ -68,6 +69,34 @@ def pretty(label: str) -> str:
 def text_width(draw: ImageDraw.ImageDraw, text: str, text_font: ImageFont.ImageFont) -> float:
     box = draw.textbbox((0, 0), text, font=text_font)
     return box[2] - box[0]
+
+
+def inset_text_x(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    text_font: ImageFont.ImageFont,
+    desired_x: float,
+    image_width: int,
+    *,
+    padding: int = EDGE_PADDING,
+) -> float:
+    """Clamp text horizontally so labels always retain a visible outer gutter."""
+    width = text_width(draw, text, text_font)
+    return min(max(desired_x, padding), image_width - padding - width)
+
+
+def draw_title(draw: ImageDraw.ImageDraw, title: str, image_width: int) -> None:
+    """Center a title and shrink it only as much as needed to preserve edge padding."""
+    title_font = TITLE_FONT
+    max_width = image_width - 2 * EDGE_PADDING
+    if text_width(draw, title, title_font) > max_width:
+        for size in range(35, 25, -1):
+            candidate = font(size, bold=True)
+            if text_width(draw, title, candidate) <= max_width:
+                title_font = candidate
+                break
+    x = (image_width - text_width(draw, title, title_font)) / 2
+    draw.text((x, 48), title, fill="#111111", font=title_font)
 
 
 def recent_rows() -> list[dict[str, str]]:
@@ -107,19 +136,20 @@ def horizontal_year_chart(
 ) -> None:
     """Draw stacked horizontal bars so 16 years stay readable on a phone."""
     width = 920
-    top, bottom, left, right = 110, 175, 112, 88
+    top, bottom, left, right = 120, 175, 148, 140
     row_h = 60
     height = top + bottom + row_h * len(labels)
     image = Image.new("RGB", (width, height), "white")
     draw = ImageDraw.Draw(image)
-    draw.text((left, 32), title, fill="#111111", font=TITLE_FONT)
+    draw_title(draw, title, width)
     chart_w = width - left - right
     totals = [sum(series[key][i] for key in series) for i in range(len(labels))]
     max_value = max(totals) or 1
 
     for i, label in enumerate(labels):
         y = top + i * row_h + 9
-        draw.text((20, y + 5), label, fill="#333333", font=LABEL_FONT)
+        label_x = left - 24 - text_width(draw, label, LABEL_FONT)
+        draw.text((label_x, y + 5), label, fill="#333333", font=LABEL_FONT)
         x = left
         for key, values in series.items():
             value = values[i]
@@ -131,11 +161,12 @@ def horizontal_year_chart(
             )
             x += seg_w
         total_text = str(totals[i])
-        draw.text((min(width - right + 10, x + 9), y + 3), total_text, fill="#333333", font=AXIS_FONT)
+        total_x = inset_text_x(draw, total_text, AXIS_FONT, x + 9, width)
+        draw.text((total_x, y + 3), total_text, fill="#333333", font=AXIS_FONT)
 
     legend_items = list(series)
     columns = 2
-    legend_y = height - 118
+    legend_y = height - 124
     col_w = 395
     for idx, key in enumerate(legend_items):
         col = idx % columns
@@ -158,12 +189,12 @@ def vertical_bar_chart(
 ) -> None:
     many_legend_items = len(series) > 3
     width = 920
-    height = 930 if many_legend_items else 850
-    left, right, top = 98, 42, 105
-    bottom = 270 if many_legend_items else 190
+    height = 950 if many_legend_items else 870
+    left, right, top = 118, 58, 120
+    bottom = 280 if many_legend_items else 205
     image = Image.new("RGB", (width, height), "white")
     draw = ImageDraw.Draw(image)
-    draw.text((left, 32), title, fill="#111111", font=TITLE_FONT)
+    draw_title(draw, title, width)
     max_value = max(
         sum(series[k][i] for k in series) if stacked else max(series[k][i] for k in series)
         for i in range(len(labels))
@@ -186,8 +217,15 @@ def vertical_bar_chart(
     for i, label in enumerate(labels):
         x = left + (i + 0.5) * chart_w / len(labels)
         label_text = pretty(label)
+        label_x = inset_text_x(
+            draw,
+            label_text,
+            LABEL_FONT,
+            x - text_width(draw, label_text, LABEL_FONT) / 2,
+            width,
+        )
         draw.text(
-            (x - text_width(draw, label_text, LABEL_FONT) / 2, height - bottom + 20),
+            (label_x, height - bottom + 20),
             label_text,
             fill="#333333",
             font=LABEL_FONT,
@@ -234,7 +272,7 @@ def vertical_bar_chart(
             )
             draw.text((x + 32, y - 3), pretty(key), fill="#333333", font=LEGEND_FONT)
     else:
-        legend_y = height - 62
+        legend_y = height - 82
         item_width = chart_w / max(1, len(legend_items))
         for idx, key in enumerate(legend_items):
             x = left + idx * item_width
@@ -249,11 +287,11 @@ def vertical_bar_chart(
 
 
 def line_chart(title: str, labels: list[str], series: dict[str, list[float]], path: Path) -> None:
-    width, height = 920, 850
-    left, right, bottom, top = 102, 42, 190, 105
+    width, height = 920, 870
+    left, right, bottom, top = 130, 66, 190, 120
     image = Image.new("RGB", (width, height), "white")
     draw = ImageDraw.Draw(image)
-    draw.text((left, 32), title, fill="#111111", font=TITLE_FONT)
+    draw_title(draw, title, width)
     chart_w, chart_h = width - left - right, height - bottom - top
 
     for tick in range(0, 101, 20):
@@ -278,8 +316,22 @@ def line_chart(title: str, labels: list[str], series: dict[str, list[float]], pa
             if i % 2 == idx % 2 or i == len(labels) - 1:
                 value_text = f"{value:.1f}%"
                 y_offset = -35 if idx == 0 else 13
+                value_width = text_width(draw, value_text, SMALL_FONT)
+                if i == 0:
+                    desired_x = x + 14
+                elif i == len(labels) - 1:
+                    desired_x = x - value_width - 14
+                else:
+                    desired_x = x - value_width / 2
+                value_x = inset_text_x(
+                    draw,
+                    value_text,
+                    SMALL_FONT,
+                    desired_x,
+                    width,
+                )
                 draw.text(
-                    (x - text_width(draw, value_text, SMALL_FONT) / 2, y + y_offset),
+                    (value_x, y + y_offset),
                     value_text,
                     fill=colors[idx % len(colors)],
                     font=SMALL_FONT,
@@ -290,8 +342,15 @@ def line_chart(title: str, labels: list[str], series: dict[str, list[float]], pa
     for i, label in enumerate(labels):
         x = left + i * chart_w / (len(labels) - 1)
         short_label = label[2:] if len(labels) > 10 else label
+        label_x = inset_text_x(
+            draw,
+            short_label,
+            AXIS_FONT,
+            x - text_width(draw, short_label, AXIS_FONT) / 2,
+            width,
+        )
         draw.text(
-            (x - text_width(draw, short_label, AXIS_FONT) / 2, height - bottom + 20),
+            (label_x, height - bottom + 20),
             short_label,
             fill="#333333",
             font=AXIS_FONT,
@@ -304,7 +363,7 @@ def line_chart(title: str, labels: list[str], series: dict[str, list[float]], pa
             font=SMALL_FONT,
         )
 
-    legend_y = height - 64
+    legend_y = height - 84
     item_width = chart_w / max(1, len(series))
     for idx, name in enumerate(series):
         x = left + idx * item_width
@@ -325,7 +384,7 @@ def pie_chart(
     width, height = 940, 1080
     image = Image.new("RGB", (width, height), "white")
     draw = ImageDraw.Draw(image)
-    draw.text((70, 35), title, fill="#111111", font=TITLE_FONT)
+    draw_title(draw, title, width)
     total = sum(counts.values()) or 1
     palette = [
         "#4E8B73",
