@@ -91,5 +91,5 @@ jobs:
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "Apply uniform dismissal-merits scope pass"
           gh auth setup-git
-          git pull --rebase origin master
-          git push origin HEAD:master
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
