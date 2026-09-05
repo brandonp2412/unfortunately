@@ -66,6 +66,7 @@ TITLE_FONT = font(36, bold=True)
 LABEL_FONT = font(27)
 AXIS_FONT = font(22)
 SMALL_FONT = font(21)
+COMPARISON_LABEL_FONT = font(16, bold=True)
 VALUE_FONT = font(24, bold=True)
 LEGEND_FONT = font(23)
 EDGE_PADDING = 56
@@ -111,12 +112,14 @@ def draw_line_value(
     plot_bounds: tuple[float, float, float, float],
     *,
     above: bool,
+    text_font: ImageFont.ImageFont = SMALL_FONT,
+    gap: int = 16,
+    stroke_width: int = 4,
 ) -> None:
     """Draw a compact value label close to its point with a consistent series side."""
     x, y = point
-    text_w, text_h = text_size(draw, text, SMALL_FONT)
+    text_w, text_h = text_size(draw, text, text_font)
     left, top, right, bottom = plot_bounds
-    gap = 16
 
     text_x = x - text_w / 2
     text_y = y - text_h - gap if above else y + gap
@@ -127,8 +130,8 @@ def draw_line_value(
         (text_x, text_y),
         text,
         fill=color,
-        font=SMALL_FONT,
-        stroke_width=4,
+        font=text_font,
+        stroke_width=stroke_width,
         stroke_fill=SURFACE,
     )
 
@@ -347,13 +350,19 @@ def vertical_bar_chart(
 
 
 def line_chart(title: str, labels: list[str], series: dict[str, list[float]], path: Path) -> None:
-    width, height = 920, 870
+    multiple_series = len(series) > 1
+    width, height = (1180, 870) if multiple_series else (920, 870)
     left, right, bottom, top = 130, 66, 190, 120
     image = Image.new("RGB", (width, height), BACKGROUND)
     draw = ImageDraw.Draw(image)
     draw_title(draw, title, width)
     chart_w, chart_h = width - left - right, height - bottom - top
-    plot_bounds = (left, top, width - right, height - bottom)
+    plot_bounds = (
+        70 if multiple_series else left,
+        top,
+        width - 25 if multiple_series else width - right,
+        height - bottom,
+    )
     draw.rounded_rectangle(
         (left - 14, top - 12, width - right + 14, height - bottom + 12),
         radius=18,
@@ -387,35 +396,50 @@ def line_chart(title: str, labels: list[str], series: dict[str, list[float]], pa
         rendered_series.append((idx, name, values, points))
         if len(points) > 1:
             draw.line(points, fill=colors[idx % len(colors)], width=6, joint="curve")
+        point_radius = 6 if len(series) > 1 else 7
         for x, y in points:
-            draw.ellipse((x - 9, y - 9, x + 9, y + 9), fill=SURFACE)
-            draw.ellipse((x - 7, y - 7, x + 7, y + 7), fill=colors[idx % len(colors)])
+            draw.ellipse(
+                (x - point_radius - 2, y - point_radius - 2, x + point_radius + 2, y + point_radius + 2),
+                fill=SURFACE,
+            )
+            draw.ellipse(
+                (x - point_radius, y - point_radius, x + point_radius, y + point_radius),
+                fill=colors[idx % len(colors)],
+            )
 
-    # Keep labels close and predictable: first series above, second below.
-    # A comparison chart needs fewer annotations than a single-series chart;
-    # every point remains visible, but numbers are sampled to preserve whitespace.
+    # Every comparison point is labelled. Keep the two series on opposite sides
+    # of their dots so ownership is immediately obvious without leaders or boxes.
     last_index = len(labels) - 1
-    multiple_series = len(rendered_series) > 1
     for idx, _name, values, points in rendered_series:
         color = colors[idx % len(colors)]
         if multiple_series:
-            min_index = min(range(len(values)), key=values.__getitem__)
-            max_index = max(range(len(values)), key=values.__getitem__)
-            label_indices = {min_index, max_index, last_index}
+            label_indices = range(len(labels))
         else:
             label_indices = set(range(0, len(labels), 2))
             label_indices.add(last_index)
             if last_index > 0 and (last_index - 1) in label_indices:
                 label_indices.remove(last_index - 1)
 
-        for i in sorted(label_indices):
+        for i in label_indices:
+            if multiple_series and len(rendered_series) == 2:
+                other_values = rendered_series[1 - idx][2]
+                if values[i] == other_values[i]:
+                    above = idx == 0
+                else:
+                    above = values[i] > other_values[i]
+            else:
+                above = idx % 2 == 0
+
             draw_line_value(
                 draw,
                 f"{values[i]:.1f}%",
                 points[i],
                 color,
                 plot_bounds,
-                above=idx % 2 == 0,
+                above=above,
+                text_font=COMPARISON_LABEL_FONT if multiple_series else SMALL_FONT,
+                gap=(12 + 14 * (i % 2)) if multiple_series else 16,
+                stroke_width=3 if multiple_series else 4,
             )
 
     for i, label in enumerate(labels):

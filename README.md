@@ -13,7 +13,7 @@ Current counts, rates, overlap, and disagreement between those measures are gene
 
 ![Monetary win rate](output/charts/monetary_employee_win_rate_by_year.png?v=clean-20260906)
 
-![Legal vs monetary win rate](output/charts/legal_vs_monetary_win_rate_by_year.png?v=clean-20260906)
+![Legal vs monetary win rate](output/charts/legal_vs_monetary_win_rate_by_year.png?v=all-labels-20260906)
 
 ## Context
 
