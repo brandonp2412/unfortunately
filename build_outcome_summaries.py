@@ -111,9 +111,8 @@ def legal_rows(root: Path) -> list[dict[str, str]]:
             "source": reviewed["source"],
         }
 
-    # Automated source-cue matching is an audit/routing aid only. Only the
-    # year-level data above and explicit direct-agent review ledgers can produce
-    # canonical legal outcomes.
+    # Automated text matching is non-canonical. Only the year-level data above
+    # and explicit direct-agent review ledgers can produce canonical legal outcomes.
     return list(base.values())
 
 
@@ -221,48 +220,23 @@ def comparison_summary(rows: list[dict[str, str]]) -> list[dict[str, str]]:
     return result
 
 
-def unresolved_legal_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
-    return [
-        {
-            "year": row["year"],
-            "era_citation": row["era_citation"],
-            "case_name": row["case_name"],
-            "pdf_url": row["pdf_url"],
-            "monetary_outcome": row["monetary_outcome"],
-            "work_status": "agent_source_review_pending",
-        }
-        for row in rows
-        if row["monetary_outcome"] and not row["legal_outcome"]
-    ]
+def require_fully_paired(rows: list[dict[str, str]]) -> None:
+    unmatched = [row for row in rows if row["paired"] != "yes"]
+    if unmatched:
+        raise ValueError(
+            "canonical corpus requires both legal and monetary outcomes for every determination; "
+            f"found {len(unmatched)} unmatched cases"
+        )
 
 
 def headline_markdown(
     legal_summary: list[dict[str, str]],
     monetary_summary: list[dict[str, str]],
     comparison: list[dict[str, str]],
-    unresolved_count: int,
 ) -> str:
     legal = legal_summary[-1]
     money = monetary_summary[-1]
     paired = comparison[-1]
-    legal_n = int(legal["cases"])
-    money_n = int(money["cases"])
-    coverage = 100 * legal_n / money_n if money_n else 0.0
-    if unresolved_count:
-        status_text = (
-            f"**Research status: UNFINISHED.** Legal merits currently has a binary result for "
-            f"**{legal_n} of {money_n} determinations in the monetary corpus ({coverage:.1f}% coverage)**. "
-            f"The remaining **{unresolved_count} determinations are unfinished agent work** and are listed in "
-            "`unfinished_legal_cases.csv`. They still require direct source review by the reviewing agent; "
-            "their monetary outcome is not used as a substitute legal result. Automated text cues are routing "
-            "aids only and cannot complete this work."
-        )
-    else:
-        status_text = (
-            f"**Research status: COMPLETE.** Direct legal-merits source review is complete for all "
-            f"**{money_n} determinations in the canonical monetary corpus (100.0% coverage)**. "
-            "`unfinished_legal_cases.csv` is empty. Automated text cues remain non-canonical routing aids."
-        )
     return f"""# Canonical outcome summary
 
 The repository publishes two different outcome measures. They are intentionally not merged into one \"win rate\".
@@ -276,9 +250,7 @@ The repository publishes two different outcome measures. They are intentionally 
 
 **Monetary outcome** asks whether the employee obtained a positive observable net monetary order in the public determination. Zero observable employee recovery, or a net adverse order, is an employer-side monetary outcome. This is not a legal-merits classification.
 
-{status_text}
-
-There are **{paired['paired_cases']} determinations with both measures**. Among those paired cases, the two measures disagree in **{paired['disagreements']} cases ({paired['disagreement_rate']}%)**.
+The canonical corpus contains **{paired['paired_cases']} determinations with both measures**. The two measures disagree in **{paired['disagreements']} cases ({paired['disagreement_rate']}%)**.
 
 The source corpus is search-derived from the ERA determinations database. It should not be described as a proven census of every dismissal determination unless the recall audit establishes that.
 
@@ -291,7 +263,7 @@ def build(root: Path) -> dict[str, object]:
     legal = legal_rows(root)
     monetary = monetary_rows(root)
     paired = paired_rows(legal, monetary)
-    unresolved = unresolved_legal_rows(paired)
+    require_fully_paired(paired)
     legal_summary = summarize(legal)
     monetary_summary = summarize(monetary)
     comparison = comparison_summary(paired)
@@ -308,25 +280,15 @@ def build(root: Path) -> dict[str, object]:
         "year", "era_citation", "case_name", "pdf_url", "legal_outcome",
         "monetary_outcome", "paired", "disagrees",
     ])
-    write_csv(out / "unfinished_legal_cases.csv", unresolved, [
-        "year", "era_citation", "case_name", "pdf_url", "monetary_outcome", "work_status",
-    ])
-
-    legal_total = int(legal_summary[-1]["cases"])
-    money_total = int(monetary_summary[-1]["cases"])
-    coverage = 100 * legal_total / money_total if money_total else 0.0
     totals = {"legal": legal_summary[-1], "monetary": monetary_summary[-1], "paired": comparison[-1]}
     manifest = {
-        "schema_version": 4,
+        "schema_version": 5,
         "period": "2010-2025",
-        "status": {
-            "state": "complete" if not unresolved else "unfinished",
-            "remaining_agent_legal_reviews": len(unresolved),
-        },
         "corpus": {
             "description": "ERA determination search-derived dismissal corpus",
             "primary_search_phrase": "unjustified dismissal",
             "complete_population_claim": False,
+            "case_count": int(comparison[-1]["paired_cases"]),
         },
         "measures": {
             "legal_merits": {
@@ -337,13 +299,6 @@ def build(root: Path) -> dict[str, object]:
                     "output/combined_2020_2025_binary_classification.csv:original_legal_outcome",
                     "years/YYYY/output/YYYY_direct_legal_reviews.csv:direct_agent_source_review",
                 ],
-                "binary_classification_coverage": {
-                    "classified": legal_total,
-                    "reference_monetary_corpus": money_total,
-                    "coverage_percent": round(coverage, 1),
-                    "unfinished_agent_source_review": len(unresolved),
-                    "unfinished_cases": "output/headline/unfinished_legal_cases.csv",
-                },
             },
             "monetary_outcome": {
                 "employee_win": "positive observable net monetary order to the employee",
@@ -356,7 +311,7 @@ def build(root: Path) -> dict[str, object]:
     out.mkdir(parents=True, exist_ok=True)
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     (out / "README.md").write_text(
-        headline_markdown(legal_summary, monetary_summary, comparison, len(unresolved))
+        headline_markdown(legal_summary, monetary_summary, comparison)
     )
     return manifest
 

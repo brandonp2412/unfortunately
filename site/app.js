@@ -8,26 +8,19 @@
 
   const pct = (value) => value == null ? "—" : `${Number(value).toFixed(1)}%`;
   const number = (value) => Number(value || 0).toLocaleString("en-NZ");
-  const outcomeLabel = (value) => value === "employee_win" ? "Employee win" : value === "employer_win" ? "Employer win" : "Unfinished";
-  const outcomeClass = (value, kind) => value === "employee_win" ? `${kind}-win` : value === "employer_win" ? "employer-win" : "unresolved";
+  const outcomeLabel = (value) => value === "employee_win" ? "Employee win" : value === "employer_win" ? "Employer win" : "—";
+  const outcomeClass = (value, kind) => value === "employee_win" ? `${kind}-win` : value === "employer_win" ? "employer-win" : "unknown";
 
   function setHeadlineStats() {
     const manifest = state.summary.manifest;
     const totals = manifest.totals;
-    const coverage = manifest.measures.legal_merits.binary_classification_coverage;
     $("#legal-rate").textContent = pct(totals.legal.employee_win_rate);
     $("#legal-meta").textContent = `${number(totals.legal.employee_wins)} employee wins · ${number(totals.legal.cases)} classified`;
     $("#money-rate").textContent = pct(totals.monetary.employee_win_rate);
     $("#money-meta").textContent = `${number(totals.monetary.employee_wins)} employee wins · ${number(totals.monetary.cases)} determinations`;
     $("#disagreement-rate").textContent = pct(totals.paired.disagreement_rate);
     $("#paired-meta").textContent = `${number(totals.paired.disagreements)} of ${number(totals.paired.paired_cases)} paired cases`;
-    $("#coverage-rate").textContent = pct(coverage.coverage_percent);
-    const remaining = Number(coverage.unfinished_agent_source_review || 0);
-    $("#coverage-meta").textContent = `${number(coverage.classified)} classified · ${number(remaining)} unfinished`;
-    $("#work-status").textContent = remaining
-      ? `Research status: unfinished — ${number(remaining)} legal-merits determinations still need direct agent source review.`
-      : "Research status: complete — no legal-merits source reviews remain.";
-    $("#work-status").classList.toggle("complete", !remaining);
+    $("#case-count").textContent = number(totals.paired.paired_cases);
     $("#legal-definition").textContent = `${manifest.measures.legal_merits.employee_win}.`;
     $("#money-definition").textContent = `${manifest.measures.monetary_outcome.employee_win}.`;
     $("#corpus-definition").textContent = `${manifest.corpus.description}. The source is search-derived and is not presented as a proven complete population.`;
@@ -135,7 +128,6 @@
   function caseCard(item) {
     const card = document.createElement("article"); card.className = "case-card";
     if (item.disagrees === "yes") card.classList.add("disagrees");
-    if (!item.legal_outcome) card.classList.add("unresolved-legal");
 
     const year = document.createElement("div"); year.className = "case-year"; year.textContent = item.year;
     const name = document.createElement("div"); name.className = "case-name";
@@ -178,8 +170,7 @@
       const haystack = `${item.case_name || ""} ${item.era_citation || ""}`.toLowerCase();
       if (query && !haystack.includes(query)) return false;
       if (year && String(item.year) !== year) return false;
-      if (legal === "unfinished" && item.legal_outcome != null) return false;
-      if (legal && legal !== "unfinished" && item.legal_outcome !== legal) return false;
+      if (legal && item.legal_outcome !== legal) return false;
       if (money && item.monetary_outcome !== money) return false;
       if (disagreement && item.disagrees !== "yes") return false;
       return true;

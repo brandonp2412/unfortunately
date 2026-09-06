@@ -19,11 +19,11 @@ Legal outcomes come from direct review of operative findings, conclusions, and o
 - `employee_win`: the Authority upheld the dismissal grievance or found the dismissal unjustified.
 - `employer_win`: the Authority rejected the dismissal grievance or found the dismissal justified.
 
-Automated text cues and `audit_legal_source_cues.py` are routing aids only. They never create or override a canonical legal classification; final legal coding requires direct agent reading of the determination.
+Automated text cues in intermediate classifiers never create or override a canonical legal classification; final legal coding comes from direct reading of the determination.
 
-Not every monetary-corpus determination currently has a binary legal-merits classification. Canonical output reports legal classification coverage explicitly and writes every unfinished case to `output/headline/unfinished_legal_cases.csv`. A non-empty unfinished list means the project is **unfinished** and the legal headline is provisional. A monetary result is never used to fill that legal gap.
+The canonical build requires a legal-merits classification and a monetary classification for every included determination. If either measure is missing, `build_outcome_summaries.py` fails instead of publishing a partial corpus.
 
-Older and intermediate audit tables may still contain the literal pipeline state `review_required`. In those artifacts it means **unfinished agent review work**, not a request for the reader or repository user to perform the review. Canonical/public outputs use the explicit unfinished-work terminology.
+Older and intermediate audit tables may still contain historical pipeline values such as `review_required`. Those values are preserved as provenance and are not canonical outcomes.
 
 ### Monetary outcome
 
@@ -44,11 +44,10 @@ A case can therefore be a **legal employee win but a monetary employer win**, or
 - `monetary_outcome_summary.csv` — monetary totals and rates by year.
 - `legal_vs_monetary_summary.csv` — paired-case rates, overlap, and disagreement.
 - `paired_case_outcomes.csv` — case-level legal/monetary comparison.
-- `unfinished_legal_cases.csv` — monetary-corpus determinations whose direct agent legal-merits source review is still unfinished.
-- `manifest.json` — machine-readable definitions, source files, totals, and legal-classification coverage.
+- `manifest.json` — machine-readable definitions, source files, and totals.
 - `README.md` — generated human-readable headline summary.
 
-The legal and monetary datasets may have different denominators. The paired comparison uses only determinations with both measures and reports unmatched cases explicitly.
+The canonical legal and monetary datasets use the same denominator. Any unmatched case is treated as a build error.
 
 The older root-level `output/binary_outcome_summary.csv` and mixed outcome chart filenames are retained only as historical/intermediate artifacts; they are not canonical headline statistics.
 
@@ -81,7 +80,7 @@ Salary normalization accepts explicit hour, week, fortnight, month, year, or ann
 
 See `output/README.md`. In short:
 
-- `output/headline/` — canonical public statistics and legal-review coverage queue.
+- `output/headline/` — canonical public statistics and case-level comparisons.
 - `output/charts/` — public visualizations; filenames prefixed `legal_` or `monetary_` are canonical outcome charts.
 - `output/recall/` — search-recall audit results.
 - `output/uniform_*`, `output/combined_*`, queues, and audit ledgers — intermediate or audit datasets.
@@ -100,7 +99,7 @@ To acquire a new year:
 python3 analyze_era.py --root years/2026 --year 2026
 ```
 
-A year is not complete merely because automated routing produced an outcome. Completion requires determination-by-determination direct agent merits review, required monetary audits, deduplication, regenerated canonical outputs, an empty unfinished-work list for the claimed scope, and passing tests.
+Publication invariant: every included determination must have both measures, with legal merits based on direct source review. The canonical build fails on any unmatched case.
 
 To audit search recall:
 

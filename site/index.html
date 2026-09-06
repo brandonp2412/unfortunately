@@ -37,7 +37,6 @@
         <a class="button primary" href="#trends">Explore the data</a>
         <a class="button ghost" href="./downloads/paired_case_outcomes.csv">Download case data</a>
       </div>
-      <div class="noscript work-status" id="work-status" role="status">Loading research status…</div>
     </section>
 
     <section class="stats" aria-label="Headline statistics">
@@ -60,10 +59,10 @@
         <div class="stat-meta" id="paired-meta">Loading…</div>
       </article>
       <article class="stat-card">
-        <div class="stat-topline"><span class="dot coverage-dot"></span>Legal coverage</div>
-        <div class="stat-value" id="coverage-rate">—</div>
-        <div class="stat-label">of monetary corpus classified</div>
-        <div class="stat-meta" id="coverage-meta">Loading…</div>
+        <div class="stat-topline"><span class="dot coverage-dot"></span>Corpus</div>
+        <div class="stat-value" id="case-count">—</div>
+        <div class="stat-label">determinations</div>
+        <div class="stat-meta" id="case-count-meta">2010–2025</div>
       </article>
     </section>
 
@@ -125,7 +124,7 @@
         <div>
           <div class="eyebrow">Case explorer</div>
           <h2>Open the determinations.</h2>
-          <p>Search all cases in the canonical monetary corpus. Cases with unfinished legal merits are work still owed by the reviewing agent; no monetary result is used to fill that gap.</p>
+          <p>Search every determination in the canonical corpus and compare its legal-merits and monetary outcomes.</p>
         </div>
         <div class="result-total"><strong id="case-total">—</strong><span>matching cases</span></div>
       </div>
@@ -145,7 +144,6 @@
             <option value="">All outcomes</option>
             <option value="employee_win">Employee win</option>
             <option value="employer_win">Employer win</option>
-            <option value="unfinished">Unfinished</option>
           </select>
         </label>
         <label>
@@ -219,7 +217,6 @@
           <a href="./downloads/monetary_outcome_summary.csv">Monetary summary ↓</a>
           <a href="./downloads/legal_vs_monetary_summary.csv">Paired summary ↓</a>
           <a href="./downloads/paired_case_outcomes.csv">All cases ↓</a>
-          <a href="./downloads/unfinished_legal_cases.csv">Unfinished legal cases ↓</a>
           <a href="./downloads/manifest.json">Manifest ↓</a>
         </div>
       </div>

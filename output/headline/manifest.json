@@ -1,14 +1,11 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "period": "2010-2025",
-  "status": {
-    "state": "complete",
-    "remaining_agent_legal_reviews": 0
-  },
   "corpus": {
     "description": "ERA determination search-derived dismissal corpus",
     "primary_search_phrase": "unjustified dismissal",
-    "complete_population_claim": false
+    "complete_population_claim": false,
+    "case_count": 2876
   },
   "measures": {
     "legal_merits": {
@@ -18,14 +15,7 @@
         "output/combined_2010_2019_strict_classification.csv",
         "output/combined_2020_2025_binary_classification.csv:original_legal_outcome",
         "years/YYYY/output/YYYY_direct_legal_reviews.csv:direct_agent_source_review"
-      ],
-      "binary_classification_coverage": {
-        "classified": 2876,
-        "reference_monetary_corpus": 2876,
-        "coverage_percent": 100.0,
-        "unfinished_agent_source_review": 0,
-        "unfinished_cases": "output/headline/unfinished_legal_cases.csv"
-      }
+      ]
     },
     "monetary_outcome": {
       "employee_win": "positive observable net monetary order to the employee",

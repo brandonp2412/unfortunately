@@ -4,14 +4,12 @@ New Zealand Employment Relations Authority dismissal-outcome research, 2010–20
 
 **[Explore the interactive website →](https://brandonp2412.github.io/unfortunately/)**
 
-> **Research status: COMPLETE.** Direct legal-merits source review is complete for every determination in the canonical monetary corpus. The unfinished-work ledger is empty; see [`output/headline/unfinished_legal_cases.csv`](output/headline/unfinished_legal_cases.csv).
-
 This project publishes **two separate outcome measures**. They are not combined into one win rate:
 
 - **Legal merits:** whether the Authority upheld the employee's dismissal grievance or found the dismissal unjustified.
 - **Monetary outcome:** whether the employee obtained a positive observable net monetary order in the public determination.
 
-Current counts, rates, overlap, disagreement, and completion status are generated from the audited data in [the canonical headline summary](output/headline/README.md). Completion requires the unfinished-agent-review count to remain zero.
+Current counts, rates, overlap, and disagreement are generated from the audited data in [the canonical headline summary](output/headline/README.md).
 
 ![Legal merits win rate](output/charts/legal_employee_win_rate_by_year.png?v=clean-20260906)
 

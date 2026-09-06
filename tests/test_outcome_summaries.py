@@ -2,6 +2,8 @@ import csv
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from build_outcome_summaries import (
@@ -9,8 +11,8 @@ from build_outcome_summaries import (
     direct_review_rows,
     monetary_rows,
     paired_rows,
+    require_fully_paired,
     summarize,
-    unresolved_legal_rows,
 )
 
 
@@ -44,15 +46,8 @@ def test_pairing_surfaces_measure_disagreement_and_unmatched_cases():
     assert summary["legal_only"] == "1"
     assert summary["monetary_only"] == "1"
 
-    unresolved = unresolved_legal_rows(paired)
-    assert unresolved == [{
-        "year": "2010",
-        "era_citation": "C",
-        "case_name": "C v D",
-        "pdf_url": "c",
-        "monetary_outcome": "employee_win",
-        "work_status": "agent_source_review_pending",
-    }]
+    with pytest.raises(ValueError, match="requires both legal and monetary outcomes"):
+        require_fully_paired(paired)
 
 
 def write_direct_review(root: Path, *, included: str, outcome: str) -> None:
