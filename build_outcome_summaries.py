@@ -10,6 +10,7 @@ from pathlib import Path
 
 BINARY = {"employee_win", "employer_win"}
 YEARS = tuple(str(year) for year in range(2010, 2026))
+DIRECT_REVIEW_STATUS = "direct_agent_source_review"
 
 
 def read_csv(path: Path) -> list[dict[str, str]]:
@@ -35,6 +36,34 @@ def _unique_by_url(rows: list[dict[str, str]], label: str) -> list[dict[str, str
             raise ValueError(f"duplicate {label} pdf_url: {url}")
         seen[url] = row
     return list(seen.values())
+
+
+def direct_review_rows(root: Path) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for year in range(2020, 2026):
+        path = root / "years" / str(year) / "output" / f"{year}_direct_legal_reviews.csv"
+        if not path.exists():
+            continue
+        for row in read_csv(path):
+            url = row.get("pdf_url", "").strip()
+            if not url:
+                raise ValueError(f"direct review row has no pdf_url in {path}")
+            if row.get("review_status") != DIRECT_REVIEW_STATUS:
+                raise ValueError(f"direct review lacks required status for {url}")
+            included = row.get("included_in_merits_denominator", "")
+            outcome = row.get("legal_outcome", "")
+            if included not in {"yes", "no"}:
+                raise ValueError(f"invalid direct-review inclusion {included!r} for {url}")
+            if included == "yes" and outcome not in BINARY:
+                raise ValueError(f"included direct review lacks binary legal outcome for {url}")
+            if included == "no" and outcome != "excluded":
+                raise ValueError(f"excluded direct review must use legal_outcome=excluded for {url}")
+            if not row.get("supporting_quote_or_paragraph", "").strip():
+                raise ValueError(f"direct review lacks supporting source text for {url}")
+            if row.get("confidence") not in {"high", "medium"}:
+                raise ValueError(f"direct review lacks valid confidence for {url}")
+            rows.append({**row, "year": str(year), "source": str(path.relative_to(root))})
+    return _unique_by_url(rows, "direct legal review")
 
 
 def legal_rows(root: Path) -> list[dict[str, str]]:
@@ -68,17 +97,37 @@ def legal_rows(root: Path) -> list[dict[str, str]]:
                 "source": str(recent_path.relative_to(root)),
             })
 
-    # Automated source-cue matching is an audit/routing aid only. Canonical legal
-    # outcomes must already have been directly reviewed and recorded in the
-    # year-level classification data; never promote parser agreement to a final
-    # legal result here.
-    return _unique_by_url(rows, "legal")
+    base = {row["pdf_url"]: row for row in _unique_by_url(rows, "legal")}
+    for reviewed in direct_review_rows(root):
+        if reviewed["included_in_merits_denominator"] == "no":
+            base.pop(reviewed["pdf_url"], None)
+            continue
+        base[reviewed["pdf_url"]] = {
+            "year": reviewed["year"],
+            "era_citation": reviewed.get("era_citation", ""),
+            "case_name": reviewed.get("case_name", ""),
+            "pdf_url": reviewed["pdf_url"],
+            "outcome": reviewed["legal_outcome"],
+            "source": reviewed["source"],
+        }
+
+    # Automated source-cue matching is an audit/routing aid only. Only the
+    # year-level data above and explicit direct-agent review ledgers can produce
+    # canonical legal outcomes.
+    return list(base.values())
 
 
 def monetary_rows(root: Path) -> list[dict[str, str]]:
     path = root / "output" / "uniform_financial_2010_2025.csv"
+    excluded_urls = {
+        row["pdf_url"]
+        for row in direct_review_rows(root)
+        if row["included_in_merits_denominator"] == "no"
+    }
     rows = []
     for row in read_csv(path):
+        if row.get("pdf_url", "") in excluded_urls:
+            continue
         outcome = row.get("financial_binary_outcome", "")
         if outcome not in BINARY:
             raise ValueError(f"non-binary monetary outcome {outcome!r} for {row.get('pdf_url', '')}")
@@ -199,6 +248,21 @@ def headline_markdown(
     legal_n = int(legal["cases"])
     money_n = int(money["cases"])
     coverage = 100 * legal_n / money_n if money_n else 0.0
+    if unresolved_count:
+        status_text = (
+            f"**Research status: UNFINISHED.** Legal merits currently has a binary result for "
+            f"**{legal_n} of {money_n} determinations in the monetary corpus ({coverage:.1f}% coverage)**. "
+            f"The remaining **{unresolved_count} determinations are unfinished agent work** and are listed in "
+            "`unfinished_legal_cases.csv`. They still require direct source review by the reviewing agent; "
+            "their monetary outcome is not used as a substitute legal result. Automated text cues are routing "
+            "aids only and cannot complete this work."
+        )
+    else:
+        status_text = (
+            f"**Research status: COMPLETE.** Direct legal-merits source review is complete for all "
+            f"**{money_n} determinations in the canonical monetary corpus (100.0% coverage)**. "
+            "`unfinished_legal_cases.csv` is empty. Automated text cues remain non-canonical routing aids."
+        )
     return f"""# Canonical outcome summary
 
 The repository publishes two different outcome measures. They are intentionally not merged into one \"win rate\".
@@ -212,7 +276,7 @@ The repository publishes two different outcome measures. They are intentionally 
 
 **Monetary outcome** asks whether the employee obtained a positive observable net monetary order in the public determination. Zero observable employee recovery, or a net adverse order, is an employer-side monetary outcome. This is not a legal-merits classification.
 
-**Research status: {'COMPLETE' if unresolved_count == 0 else 'UNFINISHED'}.** Legal merits currently has a binary result for **{legal_n} of {money_n} determinations in the monetary corpus ({coverage:.1f}% coverage)**. The remaining **{unresolved_count} determinations are unfinished agent work** and are listed in `unfinished_legal_cases.csv`. They still require direct source review by the reviewing agent; their monetary outcome is not used as a substitute legal result. Automated text cues are routing aids only and cannot complete this work.
+{status_text}
 
 There are **{paired['paired_cases']} determinations with both measures**. Among those paired cases, the two measures disagree in **{paired['disagreements']} cases ({paired['disagreement_rate']}%)**.
 
@@ -271,6 +335,7 @@ def build(root: Path) -> dict[str, object]:
                 "sources": [
                     "output/combined_2010_2019_strict_classification.csv",
                     "output/combined_2020_2025_binary_classification.csv:original_legal_outcome",
+                    "years/YYYY/output/YYYY_direct_legal_reviews.csv:direct_agent_source_review",
                 ],
                 "binary_classification_coverage": {
                     "classified": legal_total,

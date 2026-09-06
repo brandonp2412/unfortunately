@@ -4,16 +4,16 @@ The repository publishes two different outcome measures. They are intentionally 
 
 | Measure | Cases with a binary result | Employee wins | Employer wins | Employee win rate |
 |---|---:|---:|---:|---:|
-| Legal merits | 2724 | 1746 | 978 | 64.1% |
-| Monetary outcome | 3046 | 1865 | 1181 | 61.2% |
+| Legal merits | 2876 | 1832 | 1044 | 63.7% |
+| Monetary outcome | 2876 | 1800 | 1076 | 62.6% |
 
 **Legal merits** asks whether the Authority upheld the employee's dismissal grievance or found the dismissal unjustified.
 
 **Monetary outcome** asks whether the employee obtained a positive observable net monetary order in the public determination. Zero observable employee recovery, or a net adverse order, is an employer-side monetary outcome. This is not a legal-merits classification.
 
-**Research status: UNFINISHED.** Legal merits currently has a binary result for **2724 of 3046 determinations in the monetary corpus (89.4% coverage)**. The remaining **322 determinations are unfinished agent work** and are listed in `unfinished_legal_cases.csv`. They still require direct source review by the reviewing agent; their monetary outcome is not used as a substitute legal result. Automated text cues are routing aids only and cannot complete this work.
+**Research status: COMPLETE.** Direct legal-merits source review is complete for all **2876 determinations in the canonical monetary corpus (100.0% coverage)**. `unfinished_legal_cases.csv` is empty. Automated text cues remain non-canonical routing aids.
 
-There are **2724 determinations with both measures**. Among those paired cases, the two measures disagree in **627 cases (23.0%)**.
+There are **2876 determinations with both measures**. Among those paired cases, the two measures disagree in **660 cases (22.9%)**.
 
 The source corpus is search-derived from the ERA determinations database. It should not be described as a proven census of every dismissal determination unless the recall audit establishes that.
 

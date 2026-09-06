@@ -26,7 +26,13 @@ def test_build_site_exports_canonical_data(tmp_path: Path) -> None:
     assert len(cases) == summary["meta"]["case_count"]
     assert len(unfinished) == summary["meta"]["unfinished_case_count"]
     assert len(unfinished) == coverage["unfinished_agent_source_review"]
-    assert {row["legal_outcome"] for row in cases} >= {None, "employee_win", "employer_win"}
+    legal_outcomes = {row["legal_outcome"] for row in cases}
+    assert legal_outcomes >= {"employee_win", "employer_win"}
+    if summary["manifest"]["status"]["state"] == "complete":
+        assert None not in legal_outcomes
+        assert unfinished == []
+    else:
+        assert None in legal_outcomes
     assert (target / "downloads" / "paired_case_outcomes.csv").is_file()
     assert (target / "downloads" / "unfinished_legal_cases.csv").is_file()
     assert (target / "downloads" / "manifest.json").is_file()
