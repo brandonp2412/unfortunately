@@ -45,6 +45,7 @@ def outcome_charts(title_prefix: str, summary_name: str, file_prefix: str) -> No
             ]
         },
         OUT / f"{file_prefix}_employee_win_rate_by_year.png",
+        label_all_points=True,
     )
     pie_chart(
         f"{title_prefix} outcomes · 2010–2025",

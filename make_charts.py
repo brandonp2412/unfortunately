@@ -349,9 +349,16 @@ def vertical_bar_chart(
     image.save(path, optimize=True)
 
 
-def line_chart(title: str, labels: list[str], series: dict[str, list[float]], path: Path) -> None:
+def line_chart(
+    title: str,
+    labels: list[str],
+    series: dict[str, list[float]],
+    path: Path,
+    *,
+    label_all_points: bool = False,
+) -> None:
     multiple_series = len(series) > 1
-    width, height = (1180, 870) if multiple_series else (920, 870)
+    width, height = (1180, 870) if multiple_series or label_all_points else (920, 870)
     left, right, bottom, top = 130, 66, 190, 120
     image = Image.new("RGB", (width, height), BACKGROUND)
     draw = ImageDraw.Draw(image)
@@ -412,7 +419,7 @@ def line_chart(title: str, labels: list[str], series: dict[str, list[float]], pa
     last_index = len(labels) - 1
     for idx, _name, values, points in rendered_series:
         color = colors[idx % len(colors)]
-        if multiple_series:
+        if multiple_series or label_all_points:
             label_indices = range(len(labels))
         else:
             label_indices = set(range(0, len(labels), 2))
@@ -437,9 +444,9 @@ def line_chart(title: str, labels: list[str], series: dict[str, list[float]], pa
                 color,
                 plot_bounds,
                 above=above,
-                text_font=COMPARISON_LABEL_FONT if multiple_series else SMALL_FONT,
-                gap=(12 + 14 * (i % 2)) if multiple_series else 16,
-                stroke_width=3 if multiple_series else 4,
+                text_font=COMPARISON_LABEL_FONT if multiple_series or label_all_points else SMALL_FONT,
+                gap=(12 + 14 * (i % 2)) if multiple_series or label_all_points else 16,
+                stroke_width=3 if multiple_series or label_all_points else 4,
             )
 
     for i, label in enumerate(labels):
