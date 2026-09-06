@@ -104,7 +104,6 @@ def score_text(text: str) -> dict[str, object]:
         else:
             neutrals.append(unit)
 
-    # Deduplicate exact repeated order sentences/amounts.
     positives = list(dict.fromkeys(positives))
     negatives = list(dict.fromkeys(negatives))
     positive_total = sum(amount for amount, _ in positives)
