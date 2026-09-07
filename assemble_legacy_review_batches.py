@@ -56,15 +56,19 @@ def assemble(root: Path, year: int, require_complete: bool = False) -> Path:
         writer.writerows(assembled)
 
     print(f"{year}: assembled {len(assembled)} of {len(brief)} review rows")
-    if require_complete:
-        if len(assembled) != len(brief):
-            raise SystemExit(f"{year}: {len(brief) - len(assembled)} determinations remain unreviewed")
-        errors = validate(root, year)
-        if errors:
-            for error in errors:
-                print(error)
-            raise SystemExit(f"{year}: review validation failed with {len(errors)} error(s)")
-        print(f"{year}: complete review passed validation")
+    if not require_complete:
+        return target
+
+    if len(assembled) != len(brief):
+        raise SystemExit(f"{year}: {len(brief) - len(assembled)} determinations remain unreviewed")
+
+    errors = validate(root, year)
+    if errors:
+        for error in errors:
+            print(error)
+        raise SystemExit(f"{year}: review validation failed with {len(errors)} error(s)")
+
+    print(f"{year}: complete review passed validation")
     return target
 
 
