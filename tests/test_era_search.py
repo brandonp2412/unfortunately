@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from era_search import extract_next_start, extract_search_result_refs
+from era_search import _cache_slug, extract_next_start, extract_search_result_refs
 
 
 def test_extract_search_result_refs_accepts_current_detail_links():
@@ -34,3 +34,12 @@ def test_extract_next_start_prefers_smallest_forward_offset():
     assert extract_next_start(html, 0) == 10
     assert extract_next_start(html, 10) == 20
     assert extract_next_start(html, 20) is None
+
+
+def test_cache_slug_distinguishes_normalisation_collisions():
+    dashed = _cache_slug("constructive-dismissal")
+    spaced = _cache_slug("constructive dismissal")
+
+    assert dashed != spaced
+    assert dashed.startswith("constructive_dismissal_")
+    assert spaced.startswith("constructive_dismissal_")
