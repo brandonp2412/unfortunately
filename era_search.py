@@ -2,6 +2,7 @@
 """ERA determination-search helpers for current result and PDF link formats."""
 from __future__ import annotations
 
+import hashlib
 import re
 import time
 from pathlib import Path
@@ -53,7 +54,9 @@ def extract_next_start(html: str, current_start: int) -> int | None:
 
 
 def _cache_slug(keywords: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "_", keywords.lower()).strip("_") or "query"
+    readable = re.sub(r"[^a-z0-9]+", "_", keywords.lower()).strip("_") or "query"
+    digest = hashlib.sha256(keywords.encode("utf-8")).hexdigest()[:10]
+    return f"{readable}_{digest}"
 
 
 def all_search_result_refs(root: Path, year: int, keywords: str) -> list[str]:
