@@ -3,7 +3,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from era_search import _cache_slug, extract_next_start, extract_search_result_refs
+import era_search
+from era_search import _cache_slug, extract_next_start, extract_search_result_refs, resolve_pdf_url
 
 
 def test_extract_search_result_refs_accepts_current_detail_links():
@@ -43,3 +44,24 @@ def test_cache_slug_distinguishes_normalisation_collisions():
     assert dashed != spaced
     assert dashed.startswith("constructive_dismissal_")
     assert spaced.startswith("constructive_dismissal_")
+
+
+def test_resolve_pdf_url_accepts_explicitly_unavailable_legacy_pdf(monkeypatch):
+    monkeypatch.setattr(
+        era_search,
+        "fetch",
+        lambda _url: b"<td>PDF file not available for download, please contact us to request a copy.</td>",
+    )
+
+    assert resolve_pdf_url("https://determinations.era.govt.nz/determination/view/10182", 2011) is None
+
+
+def test_resolve_pdf_url_still_fails_closed_for_unexpected_missing_link(monkeypatch):
+    monkeypatch.setattr(era_search, "fetch", lambda _url: b"<html><body>detail page changed</body></html>")
+
+    try:
+        resolve_pdf_url("https://determinations.era.govt.nz/determination/view/99999", 2011)
+    except RuntimeError as exc:
+        assert "no PDF link found" in str(exc)
+    else:
+        raise AssertionError("unexpected missing PDF link should fail closed")

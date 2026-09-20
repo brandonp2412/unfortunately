@@ -14,6 +14,7 @@ BASE = "https://determinations.era.govt.nz"
 SEARCH = BASE + "/determinations/DeterminationSearchForm"
 RESULT_VIEW_RE = re.compile(r'href=["\']([^"\']*/determination/view/\d+)["\']', re.I)
 PDF_LINK_RE = re.compile(r'href=["\']([^"\']+\.pdf(?:\?[^"\']*)?)["\']', re.I)
+PDF_UNAVAILABLE_RE = re.compile(r"PDF file not available for download", re.I)
 PAGE_START_RE = re.compile(r'(?:[?&]|&amp;)start=(\d+)', re.I)
 PAGE_SIZE = 10
 MAX_START = 5000
@@ -128,8 +129,8 @@ def all_search_result_refs(root: Path, year: int, keywords: str) -> list[str]:
     return refs
 
 
-def resolve_pdf_url(ref: str, year: int, root: Path | None = None) -> str:
-    """Resolve a search result/detail reference to its determination PDF URL."""
+def resolve_pdf_url(ref: str, year: int, root: Path | None = None) -> str | None:
+    """Resolve a search result/detail reference to its determination PDF URL when available."""
     if re.search(r"\.pdf(?:\?|$)", ref, re.I):
         return ref
     cache: Path | None = None
@@ -144,6 +145,8 @@ def resolve_pdf_url(ref: str, year: int, root: Path | None = None) -> str:
             cache.write_bytes(payload)
         html = payload.decode(errors="replace")
     links = [urljoin(BASE, value) for value in PDF_LINK_RE.findall(html)]
+    if not links and PDF_UNAVAILABLE_RE.search(html):
+        return None
     if not links:
         raise RuntimeError(f"no PDF link found on ERA determination page {ref}")
     preferred = [
@@ -159,6 +162,9 @@ def all_result_pdf_urls(root: Path, year: int, keywords: str) -> list[str]:
     urls: list[str] = []
     for ref in refs:
         url = resolve_pdf_url(ref, year, root)
+        if url is None:
+            print(f"Skipping ERA determination without downloadable PDF: {ref}")
+            continue
         if url not in urls:
             urls.append(url)
     return urls

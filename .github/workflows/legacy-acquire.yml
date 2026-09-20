@@ -4,6 +4,11 @@ on:
   push:
     paths:
       - .github/workflows/legacy-acquire.yml
+      - analyze_era.py
+      - analyze_legacy_year.py
+      - build_review_dossier.py
+      - era_search.py
+      - tests/**
   workflow_dispatch:
 
 concurrency:
