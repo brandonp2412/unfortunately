@@ -101,8 +101,13 @@ jobs:
               raise SystemExit("; ".join(failures))
           PY
 
+      - name: Set up test environment
+        run: |
+          python3 -m venv .venv
+          .venv/bin/python -m pip install --disable-pip-version-check pytest
+
       - name: Run tests
-        run: python3 -m pytest -q
+        run: .venv/bin/python -m pytest -q
 
       - name: Commit auditable review inputs
         env:
