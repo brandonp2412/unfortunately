@@ -9,6 +9,8 @@ def test_build_site_exports_canonical_data_and_visible_content(tmp_path: Path) -
     build_site(target)
 
     html = (target / "index.html").read_text(encoding="utf-8")
+    assert 'href="./favicon.svg"' in html
+    assert (target / "favicon.svg").is_file()
     for content in (
         "Legal merits",
         "Monetary outcome",
